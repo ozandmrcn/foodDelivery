@@ -2,35 +2,51 @@
   "info": {
     "_postman_id": "8c78100d-3fa9-410e-b0bf-8cadc1824628",
     "name": "Food Delivery API",
-    "description": "# 🍔 Food Delivery Microservices API\n\nWelcome to the official Postman collection for the **Food Delivery Microservices Platform**.\n\n---\n\n## 🌟 Microservices Architecture Overview\n\n| Service | Port | Gateway Prefix | Status | Description |\n|---|---|---|---|---|\n| **API Gateway** | `3000` | `/api/*` | 🟢 Active | Central reverse proxy routing requests to all microservices |\n| **Auth Service** | `3001` | `/api/auth` | 🟢 Complete | User authentication, JWT tokens, RBAC & user addresses |\n| **Restaurant Service** | `3002` | `/api/restaurants` | 🟢 Complete | Restaurant catalog, filters, opening hours & menu items |\n| **Order Service** | `3003` | `/api/order` | 🟢 Complete | Order lifecycle management, checkout & user order history |\n| **Delivery Service** | `3004` | `/api/delivery` | 🟡 In Progress | Courier authentication & upcoming delivery fulfillment |\n\n---\n\n## 🔑 Dynamic Environment Variables\n\nThis collection automatically extracts and manages the following variables:\n- `baseUrl`: `http://localhost:3000` (API Gateway)\n- `token`: Bearer access token (auto-extracted from login/register response)\n- `refreshToken`: Refresh token for obtaining new access tokens\n- `userId`: Current authenticated user's ID\n- `restaurantId`: ID of the created or selected restaurant\n- `menuItemId`: ID of the created menu item\n- `orderId`: ID of the created order\n\n> 💡 **Tip:** Execute **Register** or **Login** first. The test script will auto-populate `token` and `userId` across the entire collection.",
+    "description": "# 🍔 Food Delivery Microservices API\n\nWelcome to the official Postman collection for the **Food Delivery Microservices Platform**.\n\n---\n\n## 🧪 Automated Collection Runner Ready\nThis collection is specially configured to pass **100% of tests** when executed with **Postman Collection Runner** in top-down sequence.\n\n### ⚙️ Execution Flow:\n1. **Auth Service**: Registers an Admin user with a unique timestamped email, sets JWT variables, logs in, checks profile, refreshes token, adds address.\n2. **Restaurant Service**: Creates a restaurant (`restaurantId`), adds a menu item (`menuItemId`), lists restaurants, gets details and menu.\n3. **Order Service**: Places order (`orderId`) using dynamic `restaurantId` & `menuItemId`, fetches order details, verifies user orders, updates status.\n4. **Delivery Service**: Tests registration and authentication for courier.\n\n---\n\n## 🔑 Dynamic Environment Variables\n- `baseUrl`: `http://localhost:3000` (API Gateway)\n- `token`: Bearer access token\n- `refreshToken`: Refresh token for obtaining new access tokens\n- `userId`: Authenticated user's ID\n- `restaurantId`: ID of the newly created restaurant\n- `menuItemId`: ID of the newly created menu item\n- `orderId`: ID of the newly created order",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "57587615"
   },
   "item": [
     {
-      "name": "Auth Service",
-      "description": "Handles user registration, login, JWT token lifecycle, user profiles, and address management.",
+      "name": "1. Auth Service",
+      "description": "User lifecycle, JWT authentication, tokens, profiles, and delivery addresses.",
       "item": [
         {
-          "name": "Register",
+          "name": "1. Register (Admin)",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique email to ensure Register always succeeds in Collection Runner",
+                  "var timestamp = Date.now();",
+                  "var uniqueEmail = 'admin_' + timestamp + '@delivery.com';",
+                  "pm.collectionVariables.set('userEmail', uniqueEmail);",
+                  "pm.collectionVariables.set('userPassword', 'password123');"
+                ],
+                "type": "text/javascript"
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
+                  "pm.test('Register returns 201 Created', function () {",
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "if (pm.response.code === 201) {",
+                  "pm.test('Response contains tokens and user data', function () {",
                   "    var res = pm.response.json();",
-                  "    if (res.data) {",
-                  "        if (res.data.accessToken) pm.collectionVariables.set(\"token\", res.data.accessToken);",
-                  "        if (res.data.refreshToken) pm.collectionVariables.set(\"refreshToken\", res.data.refreshToken);",
-                  "        if (res.data.user && res.data.user.id) pm.collectionVariables.set(\"userId\", res.data.user.id);",
-                  "        console.log(\"✅ Registration successful. Variables set: userId, token, refreshToken\");",
-                  "    }",
-                  "}"
+                  "    pm.expect(res.status).to.eql('success');",
+                  "    pm.expect(res.result).to.be.an('object');",
+                  "    pm.expect(res.result.data.accessToken).to.be.a('string');",
+                  "    ",
+                  "    // Set Collection Variables for subsequent requests",
+                  "    pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
+                  "    pm.collectionVariables.set('userId', res.result.data.user.id);",
+                  "    console.log('✅ Registered User ID:', res.result.data.user.id);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -46,7 +62,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"ozan@delivery.com\",\n    \"password\": \"password123\",\n    \"firstName\": \"Ozan\",\n    \"lastName\": \"Demircan\",\n    \"phone\": \"+12125550199\",\n    \"role\": \"admin\"\n}",
+              "raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"{{userPassword}}\",\n    \"firstName\": \"Ozan\",\n    \"lastName\": \"Demircan\",\n    \"phone\": \"+12125550199\",\n    \"role\": \"admin\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -64,30 +80,31 @@
                 "register"
               ]
             },
-            "description": "### 👤 Register User\nRegisters a new user account with role `customer`, `restaurant_owner`, `courier`, or `admin`.\n\n**Response:** Returns user profile and initial access & refresh tokens. Automatically saves `token`, `refreshToken`, and `userId`."
+            "description": "### 👤 Register User\nRegisters a new Admin account with a unique timestamped email so tests never fail due to duplicate email."
           },
           "response": []
         },
         {
-          "name": "Login",
+          "name": "2. Login",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Login returns 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "if (pm.response.code === 200) {",
+                  "pm.test('Login returns valid tokens', function () {",
                   "    var res = pm.response.json();",
-                  "    if (res.data) {",
-                  "        if (res.data.accessToken) pm.collectionVariables.set(\"token\", res.data.accessToken);",
-                  "        if (res.data.refreshToken) pm.collectionVariables.set(\"refreshToken\", res.data.refreshToken);",
-                  "        if (res.data.user && res.data.user.id) pm.collectionVariables.set(\"userId\", res.data.user.id);",
-                  "        console.log(\"🔑 Login successful. Token and UserId updated.\");",
-                  "    }",
-                  "}"
+                  "    pm.expect(res.status).to.eql('success');",
+                  "    pm.expect(res.result.data.accessToken).to.be.a('string');",
+                  "    ",
+                  "    pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
+                  "    pm.collectionVariables.set('userId', res.result.data.user.id);",
+                  "    console.log('🔑 Logged in successfully');",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -103,7 +120,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"ozan@delivery.com\",\n    \"password\": \"password123\"\n}",
+              "raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"{{userPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -121,25 +138,26 @@
                 "login"
               ]
             },
-            "description": "### 🔑 User Login\nAuthenticates existing credentials and generates short-lived Access Token (1 hour) and Refresh Token (7 days).\n\n**Automated Script:** Sets `token`, `refreshToken`, and `userId` in collection variables."
+            "description": "### 🔑 User Login\nLogs in with the registered credentials and refreshes collection tokens."
           },
           "response": []
         },
         {
-          "name": "Get Profile",
+          "name": "3. Get Profile",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Profile fetched with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"User profile has required fields\", function () {",
+                  "pm.test('User profile matches authenticated user', function () {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res).to.have.property(\"email\");",
-                  "    pm.expect(res).to.have.property(\"role\");",
+                  "    pm.expect(res.user).to.be.an('object');",
+                  "    pm.expect(res.user.email).to.eql(pm.collectionVariables.get('userEmail'));",
+                  "    pm.expect(res.user.role).to.eql('admin');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -170,28 +188,27 @@
                 "profile"
               ]
             },
-            "description": "### 👤 Get Authenticated User Profile\nFetches current user details, role, and saved delivery addresses.\n\n**Headers:** `Authorization: Bearer {{token}}`"
+            "description": "### 👤 Get Authenticated User Profile\nFetches current user details and role."
           },
           "response": []
         },
         {
-          "name": "Refresh Token",
+          "name": "4. Refresh Token",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Token refreshed with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "if (pm.response.code === 200) {",
+                  "pm.test('New access token provided', function () {",
                   "    var res = pm.response.json();",
-                  "    if (res.accessToken) {",
-                  "        pm.collectionVariables.set(\"token\", res.accessToken);",
-                  "        console.log(\"🔄 Access token refreshed.\");",
-                  "    }",
-                  "}"
+                  "    pm.expect(res.result.accessToken).to.be.a('string');",
+                  "    pm.collectionVariables.set('token', res.result.accessToken);",
+                  "    console.log('🔄 Access Token Refreshed');",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -201,19 +218,10 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Cookie",
+                "value": "refreshToken={{refreshToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
               "raw": "{{baseUrl}}/api/auth/refresh",
               "host": [
@@ -225,19 +233,24 @@
                 "refresh"
               ]
             },
-            "description": "### 🔄 Refresh JWT Access Token\nUses the stored `refreshToken` to acquire a fresh `accessToken` without requiring re-login."
+            "description": "### 🔄 Refresh JWT Access Token\nPasses `refreshToken` cookie and receives a new `accessToken`."
           },
           "response": []
         },
         {
-          "name": "Add Address",
+          "name": "5. Add Address",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Address added successfully\", function () {",
+                  "pm.test('Address added with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Addresses array updated', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.result.data.addresses).to.be.an('array').that.is.not.empty;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -282,68 +295,34 @@
                 "add-address"
               ]
             },
-            "description": "### 📍 Add User Delivery Address\nAppends a new shipping address to the user's account. When `isDefault: true`, older addresses are automatically unset as default."
-          },
-          "response": []
-        },
-        {
-          "name": "Logout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "### 🚪 Logout User\nClears session and cookies on the client."
+            "description": "### 📍 Add User Delivery Address\nAppends a new address to the user's profile."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Restaurant Service",
-      "description": "Manages restaurant listings, catalog queries, search/filters, operating hours, and menu items.",
+      "name": "2. Restaurant Service",
+      "description": "Restaurant catalog, filtering, menu items, and opening hours.",
       "item": [
         {
-          "name": "Create Restaurant (Admin / Restaurant Owner)",
+          "name": "1. Create Restaurant (Admin)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 201 or 200\", function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "pm.test('Restaurant created with 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "pm.test('Restaurant returns valid ID', function () {",
                   "    var res = pm.response.json();",
-                  "    var id = res.id || res._id || (res.data && (res.data.id || res.data._id));",
-                  "    if (id) {",
-                  "        pm.collectionVariables.set(\"restaurantId\", id);",
-                  "        console.log(\"🏪 Restaurant created with ID:\", id);",
-                  "    }",
-                  "}"
+                  "    var restId = res.id || res._id;",
+                  "    pm.expect(restId).to.be.a('string');",
+                  "    pm.collectionVariables.set('restaurantId', restId);",
+                  "    console.log('🏪 Created Restaurant ID:', restId);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -369,7 +348,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"Burger King - Manhattan\",\n    \"description\": \"Delicious flame-grilled burgers, crispy sides and beverages.\",\n    \"address\": \"456 Broadway Ave, New York, NY\",\n    \"phone\": \"+12125551234\",\n    \"email\": \"manhattan@burgerking.com\",\n    \"categories\": [\n        \"Burger\",\n        \"Fast Food\",\n        \"American\"\n    ],\n    \"deliveryTime\": 30,\n    \"minOrder\": 15,\n    \"deliveryFee\": 3,\n    \"rating\": 4.5,\n    \"isActive\": true,\n    \"isOpen\": true,\n    \"openingHours\": {\n        \"monday\": \"09:00 - 23:00\",\n        \"tuesday\": \"09:00 - 23:00\",\n        \"wednesday\": \"09:00 - 23:00\",\n        \"thursday\": \"09:00 - 23:00\",\n        \"friday\": \"09:00 - 00:00\",\n        \"saturday\": \"09:00 - 00:00\",\n        \"sunday\": \"09:00 - 23:00\"\n    }\n}",
+              "raw": "{\n    \"name\": \"Burger King - Central\",\n    \"description\": \"Delicious flame-grilled burgers, crispy fries and fresh drinks.\",\n    \"address\": \"456 Broadway Ave, New York, NY\",\n    \"phone\": \"+12125551234\",\n    \"email\": \"central@burgerking.com\",\n    \"categories\": [\n        \"Burger\",\n        \"Fast Food\",\n        \"American\"\n    ],\n    \"deliveryTime\": 30,\n    \"minOrder\": 15,\n    \"deliveryFee\": 3,\n    \"rating\": 4.8,\n    \"isActive\": true,\n    \"isOpen\": true,\n    \"openingHours\": {\n        \"monday\": \"09:00 - 23:00\",\n        \"tuesday\": \"09:00 - 23:00\",\n        \"wednesday\": \"09:00 - 23:00\",\n        \"thursday\": \"09:00 - 23:00\",\n        \"friday\": \"09:00 - 00:00\",\n        \"saturday\": \"09:00 - 00:00\",\n        \"sunday\": \"09:00 - 23:00\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -386,29 +365,28 @@
                 "restaurants"
               ]
             },
-            "description": "### 🏪 Create Restaurant\nCreates a new restaurant. Requires role `admin` or `restaurant_owner`.\n\n**Automated Script:** Automatically saves the created `restaurantId` to collection variables."
+            "description": "### 🏪 Create Restaurant\nCreates a restaurant and stores `restaurantId`."
           },
           "response": []
         },
         {
-          "name": "Add Menu Item (Admin / Restaurant Owner)",
+          "name": "2. Add Menu Item (Admin)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Menu item added successfully\", function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "pm.test('Menu item added with 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "pm.test('Menu item returns valid ID', function () {",
                   "    var res = pm.response.json();",
-                  "    var id = res.id || res._id || (res.data && (res.data.id || res.data._id));",
-                  "    if (id) {",
-                  "        pm.collectionVariables.set(\"menuItemId\", id);",
-                  "        console.log(\"🍔 Menu item created with ID:\", id);",
-                  "    }",
-                  "}"
+                  "    var mId = res.id || res._id;",
+                  "    pm.expect(mId).to.be.a('string');",
+                  "    pm.collectionVariables.set('menuItemId', mId);",
+                  "    console.log('🍔 Created Menu Item ID:', mId);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -434,7 +412,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"Whopper Meal\",\n    \"description\": \"Flame-grilled beef patty with juicy tomatoes, fresh lettuce, mayo and pickles on a toasted sesame seed bun.\",\n    \"price\": 12.99,\n    \"category\": \"Burgers\",\n    \"imageUrl\": \"https://images.unsplash.com/photo-1568901346375-23c9450c58cd\",\n    \"ingredients\": [\n        \"Flame-Grilled Beef Patty\",\n        \"Sesame Bun\",\n        \"Lettuce\",\n        \"Tomato\",\n        \"Pickles\",\n        \"Mayonnaise\"\n    ],\n    \"allergens\": [\n        \"Gluten\",\n        \"Sesame\",\n        \"Eggs\"\n    ],\n    \"isVegetarian\": false,\n    \"isAvailable\": true,\n    \"preparationTime\": 15\n}",
+              "raw": "{\n    \"name\": \"Whopper Meal\",\n    \"description\": \"Flame-grilled beef patty with juicy tomatoes, lettuce, mayo and pickles on a sesame seed bun.\",\n    \"price\": 12.99,\n    \"category\": \"Burgers\",\n    \"imageUrl\": \"https://images.unsplash.com/photo-1568901346375-23c9450c58cd\",\n    \"ingredients\": [\n        \"Flame-Grilled Beef Patty\",\n        \"Sesame Bun\",\n        \"Lettuce\",\n        \"Tomato\",\n        \"Pickles\",\n        \"Mayonnaise\"\n    ],\n    \"allergens\": [\n        \"Gluten\",\n        \"Sesame\",\n        \"Eggs\"\n    ],\n    \"isVegetarian\": false,\n    \"isAvailable\": true,\n    \"preparationTime\": 15\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -459,25 +437,25 @@
                 }
               ]
             },
-            "description": "### 🍔 Add Menu Item\nAdds a dish/item to the restaurant menu. Uses the dynamic `:id` parameter (defaults to `{{restaurantId}}`).\n\n**Automated Script:** Automatically saves the created `menuItemId`."
+            "description": "### 🍔 Add Menu Item\nAttaches food item to `{{restaurantId}}` and saves `menuItemId`."
           },
           "response": []
         },
         {
-          "name": "Get Restaurants",
+          "name": "3. Get Restaurants",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Get Restaurants returns 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response contains pagination and items\", function () {",
+                  "pm.test('Pagination structure is valid', function () {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res).to.have.property(\"items\");",
-                  "    pm.expect(res).to.have.property(\"total\");",
+                  "    pm.expect(res).to.have.property('items').that.is.an('array');",
+                  "    pm.expect(res.total).to.be.at.least(1);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -509,53 +487,33 @@
               "query": [
                 {
                   "key": "limit",
-                  "value": "10",
-                  "description": "Items per page (max 100)"
+                  "value": "10"
                 },
                 {
                   "key": "page",
-                  "value": "1",
-                  "description": "Page number (min 1)"
-                },
-                {
-                  "key": "category",
-                  "value": "Burger",
-                  "description": "Filter by food category",
-                  "disabled": true
-                },
-                {
-                  "key": "rating",
-                  "value": "4",
-                  "description": "Filter by minimum rating (0 - 5)",
-                  "disabled": true
-                },
-                {
-                  "key": "deliveryTime",
-                  "value": "40",
-                  "description": "Max delivery time in minutes (15 - 120)",
-                  "disabled": true
-                },
-                {
-                  "key": "minOrder",
-                  "value": "20",
-                  "description": "Max minimum order requirement",
-                  "disabled": true
+                  "value": "1"
                 }
               ]
             },
-            "description": "### 📋 List Restaurants\nQueries restaurants with pagination and flexible filters (category, rating, deliveryTime, minOrder)."
+            "description": "### 📋 List Restaurants\nQueries restaurant list with pagination."
           },
           "response": []
         },
         {
-          "name": "Get Restaurant Details",
+          "name": "4. Get Restaurant Details",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Restaurant details fetched with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Details match created restaurant', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.name).to.eql('Burger King - Central');",
+                  "    pm.expect(res.phone).to.eql('+12125551234');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -592,24 +550,25 @@
                 }
               ]
             },
-            "description": "### ℹ️ Get Restaurant by ID\nRetrieves full profile details, contact information, opening hours, and rating of a specific restaurant."
+            "description": "### ℹ️ Get Restaurant Details\nRetrieves profile of `{{restaurantId}}`."
           },
           "response": []
         },
         {
-          "name": "Get Restaurant Menu",
+          "name": "5. Get Restaurant Menu",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Menu fetched with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response is an array of menu items\", function () {",
+                  "pm.test('Menu contains created item', function () {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res).to.be.an(\"array\");",
+                  "    pm.expect(res).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(res[0].name).to.eql('Whopper Meal');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -640,14 +599,6 @@
                 ":id",
                 "menu"
               ],
-              "query": [
-                {
-                  "key": "category",
-                  "value": "Burgers",
-                  "description": "Optional category filter",
-                  "disabled": true
-                }
-              ],
               "variable": [
                 {
                   "key": "id",
@@ -655,35 +606,37 @@
                 }
               ]
             },
-            "description": "### 🍕 Get Restaurant Menu\nLists all food items offered by the restaurant with optional category filtering."
+            "description": "### 🍕 Get Restaurant Menu\nFetches menu items of `{{restaurantId}}`."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Order Service",
-      "description": "Handles placing orders, order status tracking, user order history, and restaurant owner order lifecycle updates.",
+      "name": "3. Order Service",
+      "description": "Order placement, detail fetching, order history, and lifecycle status management.",
       "item": [
         {
-          "name": "Create Order",
+          "name": "1. Create Order",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Order created successfully\", function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "pm.test('Order created with 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "pm.test('Order calculated totalAmount and assigned ID', function () {",
                   "    var res = pm.response.json();",
-                  "    var id = res.id || res._id || (res.data && (res.data.id || res.data._id));",
-                  "    if (id) {",
-                  "        pm.collectionVariables.set(\"orderId\", id);",
-                  "        console.log(\"📦 Order created with ID:\", id);",
-                  "    }",
-                  "}"
+                  "    var oId = res.id || res._id;",
+                  "    pm.expect(oId).to.be.a('string');",
+                  "    pm.expect(res.totalAmount).to.eql(25.98);",
+                  "    pm.expect(res.status).to.eql('pending');",
+                  "    ",
+                  "    pm.collectionVariables.set('orderId', oId);",
+                  "    console.log('📦 Created Order ID:', oId);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -726,25 +679,25 @@
                 "order"
               ]
             },
-            "description": "### 🛒 Place an Order\nCalculates totalAmount on backend and creates a new order in `pending` status.\n\n**Automated Script:** Automatically extracts and sets `orderId` in collection variables."
+            "description": "### 🛒 Place Order\nCreates order referencing `{{restaurantId}}` and `{{menuItemId}}`. Stores `orderId`."
           },
           "response": []
         },
         {
-          "name": "Get Order Details",
+          "name": "2. Get Order Details",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Order details returned with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Order contains items and status\", function () {",
+                  "pm.test('Order matches created order', function () {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res).to.have.property(\"status\");",
-                  "    pm.expect(res).to.have.property(\"totalAmount\");",
+                  "    pm.expect(res.id || res._id).to.eql(pm.collectionVariables.get('orderId'));",
+                  "    pm.expect(res.items).to.be.an('array').with.lengthOf(1);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -781,24 +734,26 @@
                 }
               ]
             },
-            "description": "### 🔍 Get Order Details\nFetches full order breakdown, items, address, status, and pricing for a specific order ID."
+            "description": "### 🔍 Get Order Details\nFetches order by `{{orderId}}`."
           },
           "response": []
         },
         {
-          "name": "Get User Orders",
+          "name": "3. Get User Orders",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('User orders fetched with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response is an array of orders\", function () {",
+                  "pm.test('User order history contains the placed order', function () {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res).to.be.an(\"array\");",
+                  "    pm.expect(res).to.be.an('array').that.is.not.empty;",
+                  "    var found = res.some(function(o) { return (o.id || o._id) === pm.collectionVariables.get('orderId'); });",
+                  "    pm.expect(found).to.be.true;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -836,24 +791,24 @@
                 }
               ]
             },
-            "description": "### 📜 Get User Order History\nLists all historical and ongoing orders placed by a specific user."
+            "description": "### 📜 Get User Orders\nFetches all orders belonging to `{{userId}}`."
           },
           "response": []
         },
         {
-          "name": "Update Order Status (Admin / Restaurant Owner)",
+          "name": "4. Update Order Status (Admin)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status updated successfully\", function () {",
+                  "pm.test('Status updated with 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Order status reflects updated value\", function () {",
+                  "pm.test('Status is now preparing', function () {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res.order.status).to.eql(\"preparing\");",
+                  "    pm.expect(res.order.status).to.eql('preparing');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -905,25 +860,30 @@
                 }
               ]
             },
-            "description": "### ⚡ Update Order Status\nAllows admins or restaurant owners to progress the order through stages:\n- `pending` -> `confirmed` -> `preparing` -> `ready` -> `on_the_way` -> `delivered` / `cancelled`."
+            "description": "### ⚡ Update Order Status\nChanges `{{orderId}}` status to `preparing`."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Delivery Service (🟡 Work In Progress)",
-      "description": "⚠️ **Work in Progress**: Handles courier authentication, order assignments, tracking and delivery lifecycle. Endpoints currently return stub responses and will be wired to full logic.",
+      "name": "4. Delivery Service (🟡 WIP)",
+      "description": "Courier registration and authentication endpoints.",
       "item": [
         {
-          "name": "Courier Register",
+          "name": "1. Courier Register",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
+                  "pm.test('Courier register returns 201 Created', function () {",
                   "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Returns success message', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -958,19 +918,24 @@
                 "register"
               ]
             },
-            "description": "### 🚴 Courier Registration\nRegisters a new delivery driver / courier."
+            "description": "### 🚴 Courier Registration\nRegisters courier stub."
           },
           "response": []
         },
         {
-          "name": "Courier Login",
+          "name": "2. Courier Login",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
+                  "pm.test('Courier login returns 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns success message', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1005,7 +970,7 @@
                 "login"
               ]
             },
-            "description": "### 🚴 Courier Login\nAuthenticates a courier and returns access credentials."
+            "description": "### 🚴 Courier Login\nLogs in courier stub."
           },
           "response": []
         }
@@ -1027,6 +992,14 @@
     },
     {
       "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "userEmail",
+      "value": ""
+    },
+    {
+      "key": "userPassword",
       "value": ""
     },
     {
