@@ -1,10 +1,10 @@
-import { orderItemSchema, validateDto } from "./order.dto.ts";
+import { orderSchema, orderStatusSchema, validateDto } from "./order.dto.ts";
 import OrderService from "./order.service.ts";
 import catchAsync from "./utils/index.ts";
 
 class OrderController {
   createOrder = catchAsync(async (req, res) => {
-    const orderData = await validateDto(orderItemSchema, req.body);
+    const orderData = await validateDto(orderSchema, req.body);
 
     const result = await OrderService.createOrder(req.user?.userId as string, orderData);
 
@@ -37,9 +37,17 @@ class OrderController {
   });
 
   updateOrderStatus = catchAsync(async (req, res) => {
-    const result = await OrderService.updateOrderStatus(req.params.orderId as string, req.body.status as string);
+    const { orderId } = req.params;
+    const { status } = await validateDto(orderStatusSchema, req.body);
 
-    res.status(200).json(result);
+    const result = await OrderService.updateOrderStatus(orderId as string, status);
+
+    if (!result) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    res.status(200).json({ order: result });
   });
 }
 

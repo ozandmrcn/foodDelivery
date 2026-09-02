@@ -49,12 +49,12 @@ export interface OrderItem {
 }
 
 export interface Address {
-  title?: string;
+  title?: string | undefined;
   address: string;
   city: string;
   district: string;
   postalCode: string;
-  isDefault?: boolean;
+  isDefault?: boolean | undefined;
 }
 
 export interface IOrder extends Document {
@@ -65,7 +65,7 @@ export interface IOrder extends Document {
   deliveryAddress: Address;
   paymentMethod: "credit_card" | "cash" | "online";
   status: OrderStatus;
-  specialInstructions?: string;
+  specialInstructions?: string | undefined;
   createdAt: Date;
   updatedAt: Date;
 }
