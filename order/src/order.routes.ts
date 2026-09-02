@@ -5,7 +5,7 @@ import { authenticate, authorize } from "./order.middleware.ts";
 const router = express.Router();
 
 router.post("/", authenticate, orderController.createOrder);
-router.get("/:orderId", authenticate, orderController.getOrderById);
+router.get("/:orderId", authenticate, orderController.getOrder);
 router.get("/user/:userId", authenticate, orderController.getUserOrders);
 router.put(
   "/:orderId/status",
