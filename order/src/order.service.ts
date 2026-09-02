@@ -27,7 +27,7 @@ class OrderService {
   }
 
   async getUserOrders(userId: string) {
-    return await Order.find([userId]);
+    return await Order.find({ userId });
   }
 
   async updateOrderStatus(orderId: string, newStatus: string) {
