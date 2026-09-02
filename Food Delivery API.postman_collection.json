@@ -181,7 +181,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Ev\",\n    \"address\": \"Atatürk Mah. Karanfil Cad. No: 5/2\",\n    \"city\": \"İstanbul\",\n    \"district\": \"Kadıköy\",\n    \"postalCode\": 34710,\n    \"isDefault\": true\n}",
+							"raw": "{\n    \"title\": \"Home\",\n    \"address\": \"123 Main Street, Apt 4B\",\n    \"city\": \"New York\",\n    \"district\": \"Manhattan\",\n    \"postalCode\": 10001,\n    \"isDefault\": true\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -358,7 +358,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Burger King\",\n    \"description\": \"En lezzetli alevde ızgara burgerler burada!\",\n    \"address\": \"Kadıköy Rıhtım Cad. No: 12\",\n    \"phone\": \"+902161234567\",\n    \"email\": \"burgerking@delivery.com\",\n    \"categories\": [\n        \"Burger\",\n        \"Fast Food\"\n    ],\n    \"deliveryTime\": 30,\n    \"minOrder\": 150,\n    \"deliveryFee\": 25,\n    \"rating\": 4.5,\n    \"isActive\": true,\n    \"isOpen\": true,\n    \"openingHours\": {\n        \"monday\": \"09:00 - 23:00\",\n        \"tuesday\": \"09:00 - 23:00\",\n        \"wednesday\": \"09:00 - 23:00\",\n        \"thursday\": \"09:00 - 23:00\",\n        \"friday\": \"09:00 - 00:00\",\n        \"saturday\": \"09:00 - 00:00\",\n        \"sunday\": \"09:00 - 23:00\"\n    }\n}",
+							"raw": "{\n    \"name\": \"Burger King\",\n    \"description\": \"Delicious flame-grilled burgers and crispy fries.\",\n    \"address\": \"456 Broadway Ave\",\n    \"phone\": \"+12125551234\",\n    \"email\": \"burgerking@delivery.com\",\n    \"categories\": [\n        \"Burger\",\n        \"Fast Food\"\n    ],\n    \"deliveryTime\": 30,\n    \"minOrder\": 15,\n    \"deliveryFee\": 3,\n    \"rating\": 4.5,\n    \"isActive\": true,\n    \"isOpen\": true,\n    \"openingHours\": {\n        \"monday\": \"09:00 - 23:00\",\n        \"tuesday\": \"09:00 - 23:00\",\n        \"wednesday\": \"09:00 - 23:00\",\n        \"thursday\": \"09:00 - 23:00\",\n        \"friday\": \"09:00 - 00:00\",\n        \"saturday\": \"09:00 - 00:00\",\n        \"sunday\": \"09:00 - 23:00\"\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -400,7 +400,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Whopper Menü\",\n    \"description\": \"Alevde ızgara Whopper eti, patates kızartması ve içecek.\",\n    \"price\": 220,\n    \"category\": \"Burger Menüleri\",\n    \"ingredients\": [\n        \"Whopper Eti\",\n        \"Susamlı Ekmek\",\n        \"Marul\",\n        \"Domates\",\n        \"Turşu\"\n    ],\n    \"allergens\": [\n        \"Gluten\",\n        \"Susam\"\n    ],\n    \"isVegetarian\": false,\n    \"isAvailable\": true,\n    \"preparationTime\": 15\n}",
+							"raw": "{\n    \"name\": \"Whopper Meal\",\n    \"description\": \"Flame-grilled Whopper patty served with fries and a soft drink.\",\n    \"price\": 12.99,\n    \"category\": \"Burger Meals\",\n    \"ingredients\": [\n        \"Beef Patty\",\n        \"Sesame Bun\",\n        \"Lettuce\",\n        \"Tomato\",\n        \"Pickles\"\n    ],\n    \"allergens\": [\n        \"Gluten\",\n        \"Sesame\"\n    ],\n    \"isVegetarian\": false,\n    \"isAvailable\": true,\n    \"preparationTime\": 15\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -455,7 +455,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"restaurantId\": \"664000000000000000000001\",\n    \"items\": [\n        {\n            \"productId\": \"664000000000000000000002\",\n            \"name\": \"Whopper Menü\",\n            \"price\": 220,\n            \"quantity\": 2\n        }\n    ],\n    \"deliveryAddress\": {\n        \"title\": \"Ev\",\n        \"address\": \"Atatürk Mah. Karanfil Cad. No: 5/2\",\n        \"city\": \"İstanbul\",\n        \"district\": \"Kadıköy\",\n        \"postalCode\": \"34710\",\n        \"isDefault\": true\n    },\n    \"paymentMethod\": \"credit_card\",\n    \"specialInstructions\": \"Zili çalmayın lütfen, bebek uyuyor.\"\n}",
+							"raw": "{\n    \"restaurantId\": \"664000000000000000000001\",\n    \"items\": [\n        {\n            \"productId\": \"664000000000000000000002\",\n            \"name\": \"Whopper Meal\",\n            \"price\": 12.99,\n            \"quantity\": 2\n        }\n    ],\n    \"deliveryAddress\": {\n        \"title\": \"Home\",\n        \"address\": \"123 Main Street, Apt 4B\",\n        \"city\": \"New York\",\n        \"district\": \"Manhattan\",\n        \"postalCode\": \"10001\",\n        \"isDefault\": true\n    },\n    \"paymentMethod\": \"credit_card\",\n    \"specialInstructions\": \"Please do not ring the doorbell, baby is sleeping.\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -568,7 +568,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"status\": \"preparing\",\n    \"reason\": \"Sipariş hazırlanıyor\"\n}",
+							"raw": "{\n    \"status\": \"preparing\",\n    \"reason\": \"Order is being prepared\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -613,7 +613,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"courier@delivery.com\",\n    \"password\": \"password123\",\n    \"firstName\": \"Ahmet\",\n    \"lastName\": \"Kurye\",\n    \"phone\": \"+905559876543\"\n}",
+							"raw": "{\n    \"email\": \"courier@delivery.com\",\n    \"password\": \"password123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Courier\",\n    \"phone\": \"+12125559876\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
