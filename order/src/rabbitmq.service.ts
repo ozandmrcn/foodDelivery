@@ -17,8 +17,24 @@ class RabbitMQService {
 
       // Create channel
       this.channel = await this.connection.createChannel();
+
+      // Create exchange
+      // durable:true => exchange will survive broker restart
+      await this.channel.assertExchange(this.exchangeName, "topic", {
+        durable: true,
+      });
+
+      // Create queues
+      await this.channel.assertQueue(this.orderQueue, { durable: true });
+      await this.channel.assertQueue(this.deliveryQueue, { durable: true });
+
+      // Bind queues to exchange
+      await this.channel.bindQueue(this.orderQueue, this.exchangeName, "order.created");
+      await this.channel.bindExchange(this.deliveryQueue, this.exchangeName, "order.ready");
+
+      console.log("Order service rabbitmq initialized");
     } catch (error) {
-      //
+      console.log("Order service rabbitmq initialization failed:", error);
     }
   }
 }
