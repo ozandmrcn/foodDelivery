@@ -42,3 +42,25 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
   }
 };
+
+// Role Authorization Middleware
+export const authorize = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(403).json({
+        status: "error",
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json({
+        status: "error",
+        message: `Only ${roles.join(" or ")} role(s) can access this endpoint`,
+      });
+      return;
+    }
+    next();
+  };
+};

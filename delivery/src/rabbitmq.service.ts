@@ -1,6 +1,5 @@
 import type { Channel, ChannelModel } from "amqplib";
 import amqp from "amqplib";
-import type { IOrder } from "./types/index.ts";
 
 class RabbitMQService {
   private connection: ChannelModel | null = null;
@@ -34,53 +33,25 @@ class RabbitMQService {
       await this.channel.bindQueue(this.deliveryQueue, this.exchangeName, "order.created");
       await this.channel.bindQueue(this.deliveryQueue, this.exchangeName, "order.ready");
 
+      // Start listening to delivery queue
+      await this.listenToDeliveryQueue();
+
       console.log("Order service rabbitmq initialized");
     } catch (error) {
       console.log("Order service rabbitmq initialization failed:", error);
     }
   }
 
-  // Publish order created event
-  async publishOrderCreated(order: IOrder): Promise<void> {
+  async listenToDeliveryQueue(): Promise<void> {
     if (!this.channel) {
-      console.log("Rabbitmq not initialized");
-      return;
+      throw new Error("RabbitMQ connection not established. Please initialize RabbitMQ first.");
     }
 
-    // Convert order object to JSON string and then to buffer
-    const message = Buffer.from(JSON.stringify(order));
+    this.channel.consume(this.deliveryQueue, async (message) => {
+      const deliveryMessage = JSON.parse(message!.content.toString());
 
-    // Publish message to exchange with routing key order.created
-    this.channel.publish(this.exchangeName, "order.created", message, {
-      persistent: true,
+      console.log("Delivery event request that came from Order service:", deliveryMessage);
     });
-
-    console.log(`Order created event published: ${order._id}`);
-  }
-
-  // Publish order ready event
-  async publishOrderReady(order: IOrder): Promise<void> {
-    if (!this.channel) {
-      console.log("Rabbitmq not initialized");
-      return;
-    }
-
-    const message = {
-      orderId: order._id,
-      userId: order.userId,
-      restaurantId: order.restaurantId,
-      deliveryAddress: order.deliveryAddress,
-      estimatedDeliveryTime: 30,
-      timeStamp: new Date().toISOString(),
-    };
-
-    const messageBuffer = Buffer.from(JSON.stringify(message));
-
-    this.channel.publish(this.exchangeName, "order.ready", messageBuffer, {
-      persistent: true,
-    });
-
-    console.log(`Order ready event published: ${order._id}`);
   }
 }
 

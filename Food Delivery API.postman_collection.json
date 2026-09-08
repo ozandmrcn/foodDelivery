@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "8c78100d-3fa9-410e-b0bf-8cadc1824628",
     "name": "Food Delivery API",
-    "description": "# 🍔 Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## 💡 Collection Features:\n- **Manual Development Mode**: Clean real-world requests and body payloads (no hardcoded `TEST` strings in request views).\n- **Automated Collection Runner Ready**: Test scripts dynamically adapt whether you click **Send** manually or execute via **Run Collection**.\n\n---\n\n## 🔑 Dynamic Environment Variables:\n- `baseUrl`: `http://localhost:3000`\n- `token`: Bearer access token (automatically saved)\n- `refreshToken`: Refresh token (automatically saved)\n- `userId`: Current user ID\n- `restaurantId`: Created or selected restaurant ID\n- `menuItemId`: Created or selected menu item ID\n- `orderId`: Created order ID",
+    "description": "# 🍔 Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## 💡 Microservices Architecture & Endpoints Overview:\n\n| Service | Base Route | Key Features |\n|---|---|---|\n| **Auth Service** | `/api/auth` | Register, Login, Profile, Refresh Token, Add Address, Logout |\n| **Restaurant Service** | `/api/restaurants` | Create Restaurant, Add Menu Item, List Restaurants, Restaurant Details, Restaurant Menu |\n| **Order Service** | `/api/order` | Place Order, Order Details, User Order History, Update Order Status |\n| **Delivery Service** | `/api/delivery` | Courier Register/Login, Update Courier Status, Courier Performance, Available Orders, Accept Delivery, Update Delivery Status, Track Delivery |\n\n---\n\n## 🔑 Dynamic Environment Variables:\n- `baseUrl`: `http://localhost:3000` (Gateway URL)\n- `token`: Bearer access token for users/admins\n- `refreshToken`: User refresh token\n- `userId`: Authenticated user ID\n- `courierToken`: Bearer access token for couriers\n- `courierId`: Authenticated courier ID\n- `restaurantId`: Created/selected restaurant ID\n- `menuItemId`: Created/selected menu item ID\n- `orderId`: Placed/selected order ID",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "57587615"
   },
@@ -18,12 +18,8 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "// If userEmail is not manually set, generate a dynamic email for Collection Runner",
-                  "var currentEmail = pm.collectionVariables.get('userEmail');",
-                  "if (!currentEmail || currentEmail.indexOf('@') === -1) {",
-                  "    var uniqueEmail = 'user_' + Date.now() + '@delivery.com';",
-                  "    pm.collectionVariables.set('userEmail', uniqueEmail);",
-                  "}"
+                  "// Always generate fresh email for Register to avoid duplicate key errors",
+                  "pm.collectionVariables.set('userEmail', 'user_' + Date.now() + '@delivery.com');"
                 ],
                 "type": "text/javascript"
               }
@@ -78,7 +74,7 @@
                 "register"
               ]
             },
-            "description": "### 👤 Register User\nRegisters a new user. If `userEmail` variable is empty, it automatically assigns a unique timestamped email."
+            "description": "### 👤 Register User\nRegisters a new user (admin/customer/restaurant_owner)."
           },
           "response": []
         },
@@ -99,7 +95,7 @@
                   "        if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
                   "        if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
                   "        if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
-                  "        console.log('🔑 Logged in successfully');",
+                  "        console.log('🔑 User Logged in successfully');",
                   "    }",
                   "}"
                 ],
@@ -135,7 +131,7 @@
                 "login"
               ]
             },
-            "description": "### 🔑 User Login\nLogs in with credentials and automatically refreshes `token` and `userId` variables."
+            "description": "### 🔑 User Login\nLogs in with credentials and saves `token` and `userId`."
           },
           "response": []
         },
@@ -228,7 +224,7 @@
                 "refresh"
               ]
             },
-            "description": "### 🔄 Refresh Token\nGets fresh access token."
+            "description": "### 🔄 Refresh Token\nObtains a new access token via refresh token cookie."
           },
           "response": []
         },
@@ -285,7 +281,7 @@
                 "add-address"
               ]
             },
-            "description": "### 📍 Add Address\nAdds a delivery address to the current user."
+            "description": "### 📍 Add Address\nAdds a delivery address to the current user profile."
           },
           "response": []
         },
@@ -318,7 +314,7 @@
                 "logout"
               ]
             },
-            "description": "### 🚪 Logout\nClears cookies and session."
+            "description": "### 🚪 Logout\nClears user session."
           },
           "response": []
         }
@@ -899,8 +895,8 @@
       ]
     },
     {
-      "name": "Delivery Service (🟡 WIP)",
-      "description": "Courier registration and authentication endpoints.",
+      "name": "Delivery Service",
+      "description": "Courier management, status updates, available delivery orders, tracking, and delivery lifecycle.",
       "item": [
         {
           "name": "Courier Register",
@@ -909,10 +905,8 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "var currentEmail = pm.collectionVariables.get('courierEmail');",
-                  "if (!currentEmail || currentEmail.indexOf('@') === -1) {",
-                  "    pm.collectionVariables.set('courierEmail', 'courier_' + Date.now() + '@delivery.com');",
-                  "}"
+                  "// Always generate fresh email for Courier Register to avoid duplicate key errors",
+                  "pm.collectionVariables.set('courierEmail', 'courier_' + Date.now() + '@delivery.com');"
                 ],
                 "type": "text/javascript"
               }
@@ -925,10 +919,16 @@
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Returns success status', function () {",
+                  "if (pm.response.code === 201) {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res.status).to.eql('success');",
-                  "});"
+                  "    if (res.data) {",
+                  "        if (res.data.token) pm.collectionVariables.set('courierToken', res.data.token);",
+                  "        if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
+                  "            pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
+                  "        }",
+                  "        console.log('🚴 Courier Registered & Token Saved');",
+                  "    }",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
@@ -944,7 +944,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"{{courierEmail}}\",\n    \"password\": \"password123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Courier\",\n    \"phone\": \"+12125559876\"\n}",
+              "raw": "{\n    \"email\": \"{{courierEmail}}\",\n    \"password\": \"password123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Courier\",\n    \"phone\": \"+12125559876\",\n    \"vehicleType\": \"motorcycle\",\n    \"vehiclePlate\": \"34XYZ789\",\n    \"isAvailable\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -952,17 +952,18 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/delivery/register",
+              "raw": "{{baseUrl}}/api/delivery/couriers/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "delivery",
+                "couriers",
                 "register"
               ]
             },
-            "description": "### 🚴 Courier Registration\nRegisters courier stub."
+            "description": "### 🚴 Courier Registration\nRegisters a new courier with vehicle details and sets `courierToken` and `courierId`."
           },
           "response": []
         },
@@ -977,10 +978,16 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Returns success status', function () {",
+                  "if (pm.response.code === 200) {",
                   "    var res = pm.response.json();",
-                  "    pm.expect(res.status).to.eql('success');",
-                  "});"
+                  "    if (res.data && res.data.token) {",
+                  "        pm.collectionVariables.set('courierToken', res.data.token);",
+                  "        if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
+                  "            pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
+                  "        }",
+                  "        console.log('🚴 Courier Logged in successfully');",
+                  "    }",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
@@ -1004,17 +1011,343 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/delivery/login",
+              "raw": "{{baseUrl}}/api/delivery/couriers/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "delivery",
+                "couriers",
                 "login"
               ]
             },
-            "description": "### 🚴 Courier Login\nLogs in courier stub."
+            "description": "### 🚴 Courier Login\nLogs in courier and saves `courierToken`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Courier Status (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"available\",\n    \"location\": {\n        \"latitude\": 40.7128,\n        \"longtitude\": -74.0060\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/couriers/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "couriers",
+                "status"
+              ]
+            },
+            "description": "### 📍 Update Courier Status\nUpdates courier availability status (`available`, `busy`, `offline`) and current GPS coordinates."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Courier Performance (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/couriers/:courierId/performance?period=weekly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "couriers",
+                ":courierId",
+                "performance"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "weekly"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "courierId",
+                  "value": "{{courierId}}"
+                }
+              ]
+            },
+            "description": "### 📊 Get Courier Performance\nAdmin endpoint to query performance stats of a courier."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Available Orders (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders"
+              ]
+            },
+            "description": "### 📦 Get Available Delivery Orders\nCourier endpoint to list ready orders waiting for delivery pickup."
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Delivery Order (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders/:orderId/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders",
+                ":orderId",
+                "accept"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### 🛵 Accept Delivery Order\nCourier accepts the assigned order."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Delivery Status (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"in_transit\",\n    \"location\": {\n        \"latitude\": 40.7128,\n        \"longtitude\": -74.0060\n    },\n    \"estimatedArrival\": 15,\n    \"notes\": \"Courier on the way with order\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders/:orderId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders",
+                ":orderId",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### 🚚 Update Delivery Status\nUpdates delivery progress (`assigned`, `picked_up`, `in_transit`, `delivered`, `failed`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Track Delivery Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders/:orderId/tracking",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders",
+                ":orderId",
+                "tracking"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### 📍 Live Order Tracking\nFetches courier live location, arrival estimates and delivery status."
           },
           "response": []
         }
@@ -1040,6 +1373,14 @@
     },
     {
       "key": "userEmail",
+      "value": ""
+    },
+    {
+      "key": "courierToken",
+      "value": ""
+    },
+    {
+      "key": "courierId",
       "value": ""
     },
     {

@@ -4,9 +4,9 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       MONGODB_URI: string;
+      PORT: string;
       JWT_SECRET: string;
       JWT_REFRESH_SECRET: string;
-      PORT: string;
       RABBITMQ_URL: string;
       RATE_LIMIT_WINDOW: string;
       RATE_LIMIT_MAX_REQ: string;
@@ -14,7 +14,7 @@ declare global {
   }
 
   namespace Express {
-    export interface Request {
+    interface Request {
       user?: {
         userId: string;
         role: UserRole;
