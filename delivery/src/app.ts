@@ -1,7 +1,7 @@
 // ============================================================================
 // 📌 DELIVERY SERVICE — APPLICATION ENTRY POINT (app.ts)
 // ============================================================================
-// ROLü IN THE ARCHITECTURE:
+// ROLE IN THE ARCHITECTURE:
 // -------------------------
 // Same bootstrap template as all services (own Express app, own port 3002,
 // own MongoDB database). This service manages COURIERS and DELIVERY TRACKING.
