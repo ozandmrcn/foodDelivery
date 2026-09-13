@@ -1,3 +1,35 @@
+// ============================================================================
+// 📌 AUTH SERVICE — TYPESCRIPT CONFIGURATION (tsconfig.json)
+// ============================================================================
+// Every (sub)service has its OWN tsconfig.json — each service compiles and
+// runs as an INDEPENDENT TypeScript project (microservice independence again).
+// This file is JSONC (JSON with Comments): TypeScript officially allows
+// comments here — the same is NOT true for package.json/nodemon.json.
+//
+// IMPORTANT FLAGS DECODED (the ones you'll meet again):
+// -----------------------------------------------------
+// module / moduleResolution: "nodenext"  -> Node's native ESM rules.
+//   The project runs with `"type": "module"` and imports use .ts extensions.
+// target: "esnext" -> transpile to the latest ECMAScript.
+// allowImportingTsExtensions: true -> import "./auth.routes.ts" (WITH .ts)
+//   allowed. Only valid because `rewriteRelativeImportExtensions` rewrites it
+//   to .js in the build output (Node ESM needs a real extension at runtime).
+// verbatimModuleSyntax: true -> `import type` MUST be used for types, so type
+//   imports are erased correctly and never executed at runtime.
+// isolatedModules: true -> every file compiles alone (safe for tsx/nodemon
+//   which do not do full-program type analysis at runtime).
+// moduleDetection: "force" -> every file is treated as a module (the `export {}`
+//   in .d.ts files pairs nicely with this).
+// noUncheckedIndexedAccess: true -> arr[i] has type T | undefined -> forces
+//   null-checks on array access (stricter = safer).
+// exactOptionalPropertyTypes: true -> `foo?: string` cannot be assigned
+//   `undefined` explicitly; it means "property may be absent".
+// strict: true -> the master switch that enables all strict checks.
+// skipLibCheck: true -> skip type-checking of .d.ts files in node_modules
+//   (much faster builds; keeps mongoose/bcrypt type quirks from breaking us).
+// sourceMap/declaration/declarationMap: true -> debug + `.d.ts` output (useful
+//   when another service later shares types via a package).
+// ============================================================================
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
@@ -7,9 +39,9 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
+    "module": "nodenext", // ES modules, Node's own resolution
     "moduleResolution": "nodenext",
-    "target": "esnext",
+    "target": "esnext", // newest JS output
     "types": [],
     // For nodejs:
     // "lib": ["esnext"],
@@ -17,13 +49,13 @@
     // and npm install -D @types/node
 
     // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
+    "sourceMap": true, // .map files for debugging the built JS
+    "declaration": true, // emit .d.ts type declarations
+    "declarationMap": true, // map declarations back to sources
 
     // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true, // index access -> T | undefined
+    "exactOptionalPropertyTypes": true, // optional props can't be set to undefined
 
     // Style Options
     // "noImplicitReturns": true,
@@ -34,14 +66,14 @@
     // "noPropertyAccessFromIndexSignature": true,
 
     // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
-    "skipLibCheck": true
+    "strict": true, // master strict toggle
+    "jsx": "react-jsx", // (not used here, but harmless)
+    "verbatimModuleSyntax": true, // enforce `import type` for types
+    "isolatedModules": true, // per-file transpilation safety
+    "noUncheckedSideEffectImports": true, // flag side-effect imports that aren't modules
+    "moduleDetection": "force", // every file is a module
+    "allowImportingTsExtensions": true, // import "./x.ts" is legal
+    "rewriteRelativeImportExtensions": true, // rewrites .ts -> .js in build output
+    "skipLibCheck": true // skip node_modules .d.ts checking (fast builds)
   }
 }

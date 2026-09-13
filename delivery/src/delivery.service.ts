@@ -1,3 +1,27 @@
+// ============================================================================
+// 📌 DELIVERY SERVICE — BUSINESS LOGIC LAYER (delivery.service.ts)
+// ============================================================================
+// Manages two "actors" of the delivery world:
+//   1. COURIER: register / login / status update / performance stats
+//   2. DELIVERY TRACKING: available orders, accept delivery, update status, track
+//
+// SECURITY NOTE — PASSWORD & JWT:
+// -------------------------------
+// The courier's password is hashed with bcrypt here (and compared with
+// bcrypt.compare). The JWT is signed with the SAME JWT_SECRET as the auth
+// service, so a courier token can be verified by the order/restaurant services
+// too. Clever side effect of shared secrets: one token works across services.
+//
+// RACE-CONDITION PROTECTION (delivery claiming):
+// ----------------------------------------------
+// In `acceptDelivery`, the query is GUARDED:
+//   { orderId, courierId: { $exists: false } }
+// "Update this delivery ONLY IF it does not yet have a courier". MongoDB does
+// the check-and-set ATOMICALLY, so if two couriers simultaneously accept the
+// same order, exactly ONE succeeds. This is how microservices handle
+// concurrent updates without locks.
+// ============================================================================
+
 import type {
   CourierLoginInput,
   CourierPerformanceInput,
@@ -13,10 +37,16 @@ import rabbitmqService from "./rabbitmq.service.ts";
 class AuthService {
   private initialized = false;
 
+  // listen to rabbitmq
+  // ⭐ NOTE: this constructor is called at import time -> the service STARTS
+  // listening to the delivery queue as soon as the process boots, before any
+  // HTTP request arrives. That is the whole point of the consumer pattern:
+  // it is always "on" so events are never missed.
   constructor() {
     this.initialize();
   }
 
+  // Lazy-once initialization guard (see order service for the same pattern).
   private async initialize() {
     if (!this.initialized) {
       await rabbitmqService.initialize();
@@ -24,17 +54,22 @@ class AuthService {
     }
   }
 
+  // -------------------------------------------------------
+  // COURIER REGISTRATION
+  // -------------------------------------------------------
   async register(data: CourierRegisterInput) {
     await this.initialize();
+    // bcrypt.hash(password, 12) — same "salt rounds" technique as auth service.
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
     const courier = await Courier.create({
-      ...data,
+      ...data, // DTO-validated fields
       password: hashedPassword,
-      role: "courier",
-      status: "offline",
+      role: "courier", // FORCED: registration can never assign admin!
+      status: "offline", // starts offline; courier must set "available"
     });
 
+    // Return a JWT right away so the courier is logged-in after registering.
     const token = jwt.sign({ userId: courier.id, role: courier.role }, process.env.JWT_SECRET as string, {
       expiresIn: "24h",
     });
@@ -48,6 +83,9 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // COURIER LOGIN
+  // -------------------------------------------------------
   async login(data: CourierLoginInput) {
     const courier = await Courier.findOne({ email: data.email });
 
@@ -55,6 +93,7 @@ class AuthService {
       throw new Error("Invalid email or password");
     }
 
+    // bcrypt.compare: hash the attempt, compare against stored hash.
     const isPasswordValid = await bcrypt.compare(data.password, courier.password);
 
     if (!isPasswordValid) {
@@ -74,8 +113,14 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // UPDATE COURIER STATUS (available / busy / offline)
+  // -------------------------------------------------------
   async updateCourierStatus(courierId: string, data: CourierStatusUpdateInput) {
     const updatePayload: any = { status: data.status };
+    // Mongoose `$push` operator appends to an ARRAY field. The courier's
+    // location becomes a HISTORY — every status update can append a new GPS
+    // point, perfect for tracking the live position later.
     if (data.location) {
       updatePayload.$push = { location: data.location };
     }
@@ -88,7 +133,13 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // AVAILABLE ORDERS FOR COURIERS
+  // -------------------------------------------------------
   async getAvailableOrders(courierId: string) {
+    // Find deliveries that are awaiting a courier:
+    //   - status is pending or ready (not yet claimed)
+    //   - courierId does not exist yet (still unclaimed)
     const deliveries = await DeliveryTracking.find({
       status: { $in: ["pending", "ready"] },
       courierId: { $exists: false },
@@ -100,7 +151,14 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // COURIER ACCEPTS AN ORDER
+  // -------------------------------------------------------
   async acceptDelivery(orderId: string, courierId: string) {
+    // ⭐ ATOMIC CLAIM — see the race-condition note in the file header.
+    // `{ courierId: { $exists: false } }` guarantees only the FIRST courier
+    // wins. If another courier just claimed it, this update matches nothing
+    // and returns null.
     const delivery = await DeliveryTracking.findOneAndUpdate(
       { orderId, courierId: { $exists: false } }, // ensures the order is not already accepted (by another courier)
       { courierId, status: "assigned" },
@@ -115,8 +173,12 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // COURIER UPDATES DELIVERY PROGRESS
+  // -------------------------------------------------------
   async updateDeliveryStatus(orderId: string, courierId: string, data: DeliveryStatusUpdateInput) {
     const delivery = await DeliveryTracking.findOneAndUpdate(
+      // Only the courier ASSIGNED to this order can update it.
       { orderId, courierId },
       {
         status: data.status,
@@ -132,6 +194,9 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // TRACKING ENDPOINT (read-only for the CUSTOMER)
+  // -------------------------------------------------------
   async trackDelivery(orderId: string) {
     const delivery = await DeliveryTracking.findOne({ orderId });
 
@@ -145,11 +210,18 @@ class AuthService {
     };
   }
 
+  // -------------------------------------------------------
+  // COURIER PERFORMANCE METRICS (for the admin dashboard)
+  // -------------------------------------------------------
   async getCourierPerformance(courierId: string) {
     const deliveries = await DeliveryTracking.find({ courierId });
 
     const totalDeliveries = deliveries.length;
     const completedDeliveries = deliveries.filter((d) => d.status === "delivered").length;
+
+    // Average delivery time = mean of (actualDeliveryTime - acceptedAt),
+    // computed only for deliveries that have both timestamps.
+    //  ms difference -> minutes with (1000 * 60).
     const avarageDeliveryTime =
       deliveries
         .filter((d) => d.actualDeliveryTime && d.acceptedAt)
@@ -157,7 +229,7 @@ class AuthService {
           (acc, d) =>
             acc + (new Date(d.actualDeliveryTime as Date).getTime() - new Date(d.acceptedAt as Date).getTime()),
           0,
-        ) / (completedDeliveries || 1);
+        ) / (completedDeliveries || 1); // (|| 1) avoids division by zero
 
     const avarageDeliveryTimeInMinutes = Math.round(avarageDeliveryTime / (1000 * 60));
 

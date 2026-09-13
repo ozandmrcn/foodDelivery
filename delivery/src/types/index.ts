@@ -1,3 +1,14 @@
+// ============================================================================
+// 📌 DELIVERY SERVICE — SHARED TYPE DEFINITIONS (types/index.ts)
+// ============================================================================
+// Home for the delivery service's TypeScript types (Courier, DeliveryTracking,
+// plus copied user/order types so the rabbitmq consumer can type the payloads
+// it receives). See ordering service's types file for the duplication lesson.
+//
+// REMEMBER: the status strings below must match the DTO enums and the
+// mongoose enums in delivery.model.ts.
+// ============================================================================
+
 import type { NextFunction, Request, Response } from "express";
 import type { Document, Types } from "mongoose";
 
@@ -37,18 +48,22 @@ export interface IJwtPayload {
   exp?: number;
 }
 
-// Teslimat
+// Teslimat — the delivery progress states (model + dto must match).
 export type DeliveryStatus = "assigned" | "picked_up" | "in_transit" | "delivered" | "failed";
 
+// A GPS point (note: "longtitude" mirrors the typo used in the models/schemas).
 export interface ILocation {
   latitude: number;
   longtitude: number;
 }
 
+// The DeliveryTracking document: track ONE order's courier journey.
+// orderId is a VALUE reference to the order service's document (no join).
 export interface IDeliveryTracking extends Document {
   orderId: Types.ObjectId | string;
   courierId: Types.ObjectId | string;
-  status: DeliveryStatus | "pending" | "ready";
+  status: DeliveryStatus | "pending" | "ready"; // union: also accepts the
+  // pre-courier states that arrive from rabbitmq events.
   location?: ILocation;
   estimatedDeliveryTime?: Date;
   actualDeliveryTime?: Date;
@@ -58,7 +73,7 @@ export interface IDeliveryTracking extends Document {
   updatedAt: Date;
 }
 
-// Kurye
+// Kurye — a courier document.
 export type CourierStatus = "available" | "busy" | "offline";
 
 export interface ICourier extends Document {
@@ -72,12 +87,13 @@ export interface ICourier extends Document {
   status: CourierStatus;
   isAvailable: boolean;
   role: "courier" | "admin";
-  location?: ILocation[] | undefined;
+  location?: ILocation[] | undefined; // position history
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Sipariş Tipleri
+// Sipariş Tipleri — order payload types (copied so the rabbitmq consumer can
+// parse the JSON messages published by the ORDER service).
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "on_the_way" | "delivered" | "cancelled";
 
 export interface OrderItem {

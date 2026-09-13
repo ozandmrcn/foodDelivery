@@ -1,3 +1,15 @@
+// ============================================================================
+// 📌 RESTAURANT SERVICE — TYPESCRIPT CONFIGURATION (tsconfig.json)
+// ============================================================================
+// IDENTICAL setup to the other services (each service = its own TS project).
+// This file is JSONC (JSON with Comments) — TypeScript allows comments here.
+//
+// MICROSERVICE-OBSERVATION: this is the "boring" service — pure CRUD, no
+// RabbitMQ — yet it still needs the SAME compile setup. That is exactly the
+// trade-off of microservices: you pay the infrastructure/configuration cost
+// per service, in exchange for independent deployability and scaling.
+// See auth/tsconfig.json for the per-flag explanation (identical flags).
+// ============================================================================
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {

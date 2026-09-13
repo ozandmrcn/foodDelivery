@@ -1,3 +1,12 @@
+// ============================================================================
+// 📌 RESTAURANT SERVICE — AUTH MIDDLEWARE (restaurant.middleware.ts)
+// ============================================================================
+// Same pattern as order/delivery: verify the JWT, set req.user to the decoded
+// payload { userId, role }, then authorize() applies the RBAC role check.
+// Identical code is duplicated per service (no shared package). Full
+// explanation lives in order.middleware.ts.
+// ============================================================================
+
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { IJwtPayload } from "./types/index.ts";
@@ -7,6 +16,7 @@ const { JsonWebTokenError, TokenExpiredError } = jwt;
 // JWT Token Authorization
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Token from cookie or `Bearer xxxx` header.
     const accessToken = req.cookies.accessToken || req.headers.authorization?.substring(7);
     if (!accessToken) {
       res.status(401).json({
@@ -17,6 +27,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
     const decoded = jwt.verify(accessToken, process.env.JWT_SECRET) as IJwtPayload;
 
+    // Attach DECODED PAYLOAD only (userId + role), no DB lookup here.
     req.user = decoded;
 
     next();
@@ -44,6 +55,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 };
 
 // Role Authorization Middleware
+// ------------------------------
+// Higher-order function returning a role-checking middleware.
 export const authorize = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {

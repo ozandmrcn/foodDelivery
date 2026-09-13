@@ -1,3 +1,14 @@
+// ============================================================================
+// 📌 DELIVERY SERVICE — DTO & VALIDATION (delivery.dto.ts)
+// ============================================================================
+// Zod schemas for every delivery/courier request body + inferred TS types.
+// Highlights worth remembering:
+//   - The `location` object is reused in several schemas -> consistent GPS shape.
+//   - Coordinates get GEO range checks: latitude -90..90, longitude -180..180.
+//   - `.enum([...])` restricts statuses to the same values the MongoDB ENUMs use
+//     in delivery.model.ts — keep the two in sync!
+// ============================================================================
+
 import { z } from "zod";
 
 // courier register
@@ -26,10 +37,10 @@ const courierStatusUpdateSchema = z.object({
       latitude: z.number().min(-90).max(90, "Please enter a valid latitude value"),
       longtitude: z.number().min(-180).max(180, "Please enter a valid longitude value"),
     })
-    .optional(),
+    .optional(), // GPS point appended to the courier's location history
 });
 
-// delivery status update
+// delivery status update — the courier progress steps
 const deliveryStatusUpdateSchema = z.object({
   status: z.enum(["assigned", "picked_up", "in_transit", "delivered", "failed"]),
   location: z
@@ -39,7 +50,7 @@ const deliveryStatusUpdateSchema = z.object({
     })
     .optional(),
   estimatedArrival: z.number().min(1, "Estimated arrival time must be at least 1 minute").optional(),
-  actualArrival: z.date().optional(),
+  actualArrival: z.date().optional(), // set when the food is handed over
   notes: z.string().optional(),
 });
 
@@ -68,7 +79,7 @@ export {
   locationUpdateSchema,
 };
 
-// type inference
+// type inference — TS types auto-derived from the schemas (single source of truth)
 export type CourierRegisterInput = z.infer<typeof courierRegisterSchema>;
 export type CourierLoginInput = z.infer<typeof courierLoginSchema>;
 export type CourierStatusUpdateInput = z.infer<typeof courierStatusUpdateSchema>;
@@ -77,6 +88,7 @@ export type CourierPerformanceInput = z.infer<typeof courierPerformanceSchema>;
 export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
 
 // Function to validate data against a schema
+// Generic <T>: each schema passed here yields a differently-typed result.
 export async function validateDto<T>(schema: z.ZodSchema<T>, data: unknown): Promise<T> {
   try {
     return schema.parse(data);

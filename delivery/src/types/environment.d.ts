@@ -1,3 +1,12 @@
+// ============================================================================
+// 📌 ENVIRONMENT & REQUEST TYPE AUGMENTATION (environment.d.ts)
+// ============================================================================
+// Adds the delivery service's env vars to NodeJS.ProcessEnv and augments
+// Express.Request so `req.user` is typed as { userId, role } (decoded JWT
+// payload, NOT the full document — unlike the auth service).
+// Uses declaration merging: `declare global` re-opens existing interfaces.
+// ============================================================================
+
 import type { IUser, UserRole } from "./index.ts";
 
 declare global {
@@ -23,4 +32,5 @@ declare global {
   }
 }
 
+// Marks this file as a module so `declare global` works.
 export {};

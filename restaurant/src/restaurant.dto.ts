@@ -1,3 +1,15 @@
+// ============================================================================
+// 📌 RESTAURANT SERVICE — DTO & VALIDATION (restaurant.dto.ts)
+// ============================================================================
+// Zod schemas for restaurant + menu item requests + query filters + inferred
+// TS types. NOTE: error messages below are in TURKISH (intentional for this
+// project); only the comments have been added in English.
+//
+// QUERY PARSING TRICK: `z.coerce.number()` converts the STRING values arriving
+// in req.query (HTTP query params are always strings!) into real numbers.
+// Without it, `?rating=4` would stay the string "4" and break comparisons.
+// ============================================================================
+
 import z from "zod";
 
 // openingHoursSchema
@@ -28,7 +40,7 @@ const restaurantSchema = z.object({
   rating: z.number().min(0, "Puan 0'dan küçük olamaz").max(5, "Puan 5'ten büyük olamaz").optional(),
   isActive: z.boolean().default(true),
   isOpen: z.boolean().default(true),
-  openingHours: openingHoursSchema,
+  openingHours: openingHoursSchema, // nested schema reused as a field
 });
 
 // menuItemSchema
@@ -48,7 +60,8 @@ const menuItemSchema = z.object({
     .max(120, "Hazırlama süresi en fazla 120 dakika olmalıdır"),
 });
 
-// query params schema
+// query params schema — for GET / (list) endpoints.
+// All numeric filters are .coerce to convert string query params to numbers.
 const queryParamsSchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -58,13 +71,14 @@ const queryParamsSchema = z.object({
   minOrder: z.coerce.number().min(0).optional(),
 });
 
-// export type
+// export type — TS types auto-derived from the schemas (single source of truth).
 export type RestaurantInput = z.infer<typeof restaurantSchema>;
 export type MenuItemInput = z.infer<typeof menuItemSchema>;
 export type OpeningHoursInput = z.infer<typeof openingHoursSchema>;
 export type QueryParamsInput = z.infer<typeof queryParamsSchema>;
 
 // Function to validate data against a schema
+// Generic <T>: each schema passed yields a differently-typed result.
 async function validateDto<T>(schema: z.ZodSchema<T>, data: unknown): Promise<T> {
   try {
     return schema.parse(data);

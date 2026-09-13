@@ -1,3 +1,15 @@
+// ============================================================================
+// 📌 ENVIRONMENT & REQUEST TYPE AUGMENTATION (environment.d.ts)
+// ============================================================================
+// Thin wrapper: adds our env vars to NodeJS.ProcessEnv and augments
+// Express.Request so that `req.user` is typed as { userId, role } for THIS
+// service (unlike the auth service, which types req.user as full IUser).
+//
+// `declare global` + `export {}` (module marker) = declaration merging:
+// we REOPEN the existing interfaces from @types/node and @types/express and
+// add our custom fields. Without the module marker this silently does nothing.
+// ============================================================================
+
 import type { IUser } from "./index.ts";
 
 declare global {
@@ -15,6 +27,7 @@ declare global {
 
   namespace Express {
     interface Request {
+      // NOTE: here only the DECODED PAYLOAD, not the full user document.
       user?: {
         userId: string;
         role: UserRole;
@@ -23,4 +36,5 @@ declare global {
   }
 }
 
+// Marks this file as a module so `declare global` works.
 export {};

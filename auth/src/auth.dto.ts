@@ -1,3 +1,13 @@
+// ============================================================================
+// 📌 AUTH SERVICE — DTO & VALIDATION (auth.dto.ts)
+// ============================================================================
+// This file already contains a great Zod/DTO guide below the imports — keep it,
+// it explains the WHY of runtime validation. Quick recap for later:
+//   - TypeScript types disappear at runtime, Zod schemas do NOT.
+//   - DTO = the "agreed shape" of data entering/exiting the service.
+//   - validateDto<T> = one generic function that validates ANY schema.
+// ============================================================================
+
 import * as z from "zod";
 
 /**
