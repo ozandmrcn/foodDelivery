@@ -1,0 +1,1403 @@
+﻿{
+  "info": {
+    "_postman_id": "8c78100d-3fa9-410e-b0bf-8cadc1824628",
+    "name": "Food Delivery API",
+    "description": "# ­şıö Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## ­şÆí Microservices Architecture & Endpoints Overview:\n\n| Service | Base Route | Key Features |\n|---|---|---|\n| **Auth Service** | `/api/auth` | Register, Login, Profile, Refresh Token, Add Address, Logout |\n| **Restaurant Service** | `/api/restaurants` | Create Restaurant, Add Menu Item, List Restaurants, Restaurant Details, Restaurant Menu |\n| **Order Service** | `/api/order` | Place Order, Order Details, User Order History, Update Order Status |\n| **Delivery Service** | `/api/delivery` | Courier Register/Login, Update Courier Status, Courier Performance, Available Orders, Accept Delivery, Update Delivery Status, Track Delivery |\n\n---\n\n## ­şöæ Dynamic Environment Variables:\n- `baseUrl`: `http://localhost:3000` (Gateway URL)\n- `token`: Bearer access token for users/admins\n- `refreshToken`: User refresh token\n- `userId`: Authenticated user ID\n- `courierToken`: Bearer access token for couriers\n- `courierId`: Authenticated courier ID\n- `restaurantId`: Created/selected restaurant ID\n- `menuItemId`: Created/selected menu item ID\n- `orderId`: Placed/selected order ID",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57587615"
+  },
+  "item": [
+    {
+      "name": "Auth Service",
+      "description": "User lifecycle, JWT authentication, tokens, profiles, and delivery addresses.",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Always generate fresh email for Register to avoid duplicate key errors",
+                  "pm.collectionVariables.set('userEmail', 'user_' + Date.now() + '@delivery.com');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created or 200 OK', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.result && res.result.data) {",
+                  "        if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "        if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
+                  "        if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
+                  "        console.log('Ô£à Registered User ID:', res.result.data.user.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"password123\",\n    \"firstName\": \"Ozan\",\n    \"lastName\": \"Demircan\",\n    \"phone\": \"+12125550199\",\n    \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "### ­şæñ Register User\nRegisters a new user (admin/customer/restaurant_owner)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.result && res.result.data) {",
+                  "        if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "        if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
+                  "        if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
+                  "        console.log('­şöæ User Logged in successfully');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "### ­şöæ User Login\nLogs in with credentials and saves `token` and `userId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Profile returns user object', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.user).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "profile"
+              ]
+            },
+            "description": "### ­şæñ Get Profile\nFetches authenticated user profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.result && res.result.accessToken) {",
+                  "        pm.collectionVariables.set('token', res.result.accessToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "### ­şöä Refresh Token\nObtains a new access token via refresh token cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Home\",\n    \"address\": \"123 Main Street, Apt 4B\",\n    \"city\": \"New York\",\n    \"district\": \"Manhattan\",\n    \"postalCode\": 10001,\n    \"isDefault\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/add-address",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "add-address"
+              ]
+            },
+            "description": "### ­şôı Add Address\nAdds a delivery address to the current user profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "### ­şÜ¬ Logout\nClears user session."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Restaurant Service",
+      "description": "Restaurant catalog, filtering, menu items, and opening hours.",
+      "item": [
+        {
+          "name": "Create Restaurant (Admin / Restaurant Owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 201', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    var restId = res.id || res._id;",
+                  "    if (restId) {",
+                  "        pm.collectionVariables.set('restaurantId', restId);",
+                  "        console.log('­şÅ¬ Restaurant ID saved:', restId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Burger King\",\n    \"description\": \"Delicious flame-grilled burgers, crispy fries and fresh drinks.\",\n    \"address\": \"456 Broadway Ave, New York, NY\",\n    \"phone\": \"+12125551234\",\n    \"email\": \"burgerking@delivery.com\",\n    \"categories\": [\n        \"Burger\",\n        \"Fast Food\",\n        \"American\"\n    ],\n    \"deliveryTime\": 30,\n    \"minOrder\": 15,\n    \"deliveryFee\": 3,\n    \"rating\": 4.8,\n    \"isActive\": true,\n    \"isOpen\": true,\n    \"openingHours\": {\n        \"monday\": \"09:00 - 23:00\",\n        \"tuesday\": \"09:00 - 23:00\",\n        \"wednesday\": \"09:00 - 23:00\",\n        \"thursday\": \"09:00 - 23:00\",\n        \"friday\": \"09:00 - 00:00\",\n        \"saturday\": \"09:00 - 00:00\",\n        \"sunday\": \"09:00 - 23:00\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/restaurants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "restaurants"
+              ]
+            },
+            "description": "### ­şÅ¬ Create Restaurant\nCreates a restaurant and saves `restaurantId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Menu Item (Admin / Restaurant Owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 201', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    var mId = res.id || res._id;",
+                  "    if (mId) {",
+                  "        pm.collectionVariables.set('menuItemId', mId);",
+                  "        console.log('­şıö Menu Item ID saved:', mId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Whopper Meal\",\n    \"description\": \"Flame-grilled beef patty with juicy tomatoes, lettuce, mayo and pickles on a sesame seed bun.\",\n    \"price\": 12.99,\n    \"category\": \"Burgers\",\n    \"imageUrl\": \"https://images.unsplash.com/photo-1568901346375-23c9450c58cd\",\n    \"ingredients\": [\n        \"Flame-Grilled Beef Patty\",\n        \"Sesame Bun\",\n        \"Lettuce\",\n        \"Tomato\",\n        \"Pickles\",\n        \"Mayonnaise\"\n    ],\n    \"allergens\": [\n        \"Gluten\",\n        \"Sesame\",\n        \"Eggs\"\n    ],\n    \"isVegetarian\": false,\n    \"isAvailable\": true,\n    \"preparationTime\": 15\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/restaurants/:id/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "restaurants",
+                ":id",
+                "menu"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{restaurantId}}"
+                }
+              ]
+            },
+            "description": "### ­şıö Add Menu Item\nAdds a menu item to the restaurant."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Restaurants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has items array', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('items').that.is.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/restaurants?limit=10&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "restaurants"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "category",
+                  "value": "Burger",
+                  "disabled": true
+                },
+                {
+                  "key": "rating",
+                  "value": "4",
+                  "disabled": true
+                },
+                {
+                  "key": "deliveryTime",
+                  "value": "40",
+                  "disabled": true
+                },
+                {
+                  "key": "minOrder",
+                  "value": "20",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "### ­şôï List Restaurants\nQueries restaurants with pagination and filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Restaurant Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/restaurants/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "restaurants",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{restaurantId}}"
+                }
+              ]
+            },
+            "description": "### Ôä╣´©Å Get Restaurant Details\nFetches restaurant by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Restaurant Menu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array of menu items', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/restaurants/:id/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "restaurants",
+                ":id",
+                "menu"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{restaurantId}}"
+                }
+              ]
+            },
+            "description": "### ­şıò Get Restaurant Menu\nLists all food items offered by the restaurant."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Order Service",
+      "description": "Order placement, detail fetching, order history, and lifecycle status management.",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 201', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    var oId = res.id || res._id;",
+                  "    if (oId) {",
+                  "        pm.collectionVariables.set('orderId', oId);",
+                  "        console.log('­şôĞ Order ID saved:', oId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"restaurantId\": \"{{restaurantId}}\",\n    \"items\": [\n        {\n            \"productId\": \"{{menuItemId}}\",\n            \"name\": \"Whopper Meal\",\n            \"price\": 12.99,\n            \"quantity\": 2\n        }\n    ],\n    \"deliveryAddress\": {\n        \"title\": \"Home\",\n        \"address\": \"123 Main Street, Apt 4B\",\n        \"city\": \"New York\",\n        \"district\": \"Manhattan\",\n        \"postalCode\": \"10001\",\n        \"isDefault\": true\n    },\n    \"paymentMethod\": \"credit_card\",\n    \"specialInstructions\": \"Please do not ring the doorbell, baby is sleeping.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "order"
+              ]
+            },
+            "description": "### ­şøÆ Place Order\nCreates order using current `restaurantId` and `menuItemId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Order details returned', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.items).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/order/:orderId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "order",
+                ":orderId"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### ­şöı Get Order Details\nFetches order details by `orderId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User orders is an array', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/order/user/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "order",
+                "user",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "### ­şô£ Get User Orders\nFetches all orders belonging to `userId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order Status (Admin / Restaurant Owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Order status updated successfully', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.order.status).to.eql('preparing');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"preparing\",\n    \"reason\": \"Order is currently being prepared\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/order/:orderId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "order",
+                ":orderId",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### ÔÜí Update Order Status\nChanges order status to `preparing`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Delivery Service",
+      "description": "Courier management, status updates, available delivery orders, tracking, and delivery lifecycle.",
+      "item": [
+        {
+          "name": "Courier Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Always generate fresh email for Courier Register to avoid duplicate key errors",
+                  "pm.collectionVariables.set('courierEmail', 'courier_' + Date.now() + '@delivery.com');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data) {",
+                  "        if (res.data.token) pm.collectionVariables.set('courierToken', res.data.token);",
+                  "        if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
+                  "            pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
+                  "        }",
+                  "        console.log('­şÜ┤ Courier Registered & Token Saved');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{courierEmail}}\",\n    \"password\": \"password123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Courier\",\n    \"phone\": \"+12125559876\",\n    \"vehicleType\": \"motorcycle\",\n    \"vehiclePlate\": \"34XYZ789\",\n    \"isAvailable\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/couriers/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "couriers",
+                "register"
+              ]
+            },
+            "description": "### ­şÜ┤ Courier Registration\nRegisters a new courier with vehicle details and sets `courierToken` and `courierId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Courier Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.token) {",
+                  "        pm.collectionVariables.set('courierToken', res.data.token);",
+                  "        if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
+                  "            pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
+                  "        }",
+                  "        console.log('­şÜ┤ Courier Logged in successfully');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{courierEmail}}\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/couriers/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "couriers",
+                "login"
+              ]
+            },
+            "description": "### ­şÜ┤ Courier Login\nLogs in courier and saves `courierToken`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Courier Status (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"available\",\n    \"location\": {\n        \"latitude\": 40.7128,\n        \"longtitude\": -74.0060\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/couriers/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "couriers",
+                "status"
+              ]
+            },
+            "description": "### ­şôı Update Courier Status\nUpdates courier availability status (`available`, `busy`, `offline`) and current GPS coordinates."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Courier Performance (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/couriers/:courierId/performance?period=weekly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "couriers",
+                ":courierId",
+                "performance"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "weekly"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "courierId",
+                  "value": "{{courierId}}"
+                }
+              ]
+            },
+            "description": "### ­şôè Get Courier Performance\nAdmin endpoint to query performance stats of a courier."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Available Orders (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders"
+              ]
+            },
+            "description": "### ­şôĞ Get Available Delivery Orders\nCourier endpoint to list ready orders waiting for delivery pickup."
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Delivery Order (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders/:orderId/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders",
+                ":orderId",
+                "accept"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### ­şøÁ Accept Delivery Order\nCourier accepts the assigned order."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Delivery Status (Courier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"in_transit\",\n    \"location\": {\n        \"latitude\": 40.7128,\n        \"longtitude\": -74.0060\n    },\n    \"estimatedArrival\": 15,\n    \"notes\": \"Courier on the way with order\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders/:orderId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders",
+                ":orderId",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### ­şÜÜ Update Delivery Status\nUpdates delivery progress (`assigned`, `picked_up`, `in_transit`, `delivered`, `failed`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Track Delivery Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delivery/orders/:orderId/tracking",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "delivery",
+                "orders",
+                ":orderId",
+                "tracking"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}"
+                }
+              ]
+            },
+            "description": "### ­şôı Live Order Tracking\nFetches courier live location, arrival estimates and delivery status."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "userEmail",
+      "value": ""
+    },
+    {
+      "key": "courierToken",
+      "value": ""
+    },
+    {
+      "key": "courierId",
+      "value": ""
+    },
+    {
+      "key": "courierEmail",
+      "value": ""
+    },
+    {
+      "key": "restaurantId",
+      "value": ""
+    },
+    {
+      "key": "menuItemId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    }
+  ]
+}
