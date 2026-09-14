@@ -108,12 +108,12 @@ class RabbitMQService {
 
     // consumer callback: automatically invoked for each queued message.
     this.channel.consume(this.deliveryQueue, async (message) => {
-      // message.content = Buffer -> toString() -> JSON.parse to reconstruct
-      // the original object the producer sent (the IOrder document payload).
-      // NB: the producer's toJSON transform renames _id -> id, so the parsed
-      // payload carries `id` on order.created (and `orderId` on order.ready).
       const deliveryMessage = JSON.parse(message!.content.toString()) as IOrder & { id?: string };
       const orderId = deliveryMessage._id?.toString() ?? deliveryMessage.id;
+
+      console.log("\n--------------------------------------------\n");
+      console.log("Delivery message received:", deliveryMessage);
+      console.log("\n--------------------------------------------\n");
 
       // ══════════════════════════════════════════════════════════════════
       // if delivery status is pending create a new delivery tracking
@@ -121,6 +121,7 @@ class RabbitMQService {
         // (A) Create DeliveryTracking { orderId, status: "pending" }
         const deliveryTracking = await DeliveryTracking.create({
           orderId,
+          courierId: null,
           status: "pending",
           estimatedDeliveryTime: new Date(Date.now() + 60 * 60 * 1000),
           ...(deliveryMessage.specialInstructions && { notes: deliveryMessage.specialInstructions }),
@@ -129,11 +130,13 @@ class RabbitMQService {
         // (B) Find an available courier
         const courier = await Courier.findOne({ status: "available", isAvailable: true }).sort({ createdAt: 1 });
 
-        // (C) claim delivery atomically with { courierId, status: "assigned" }
         if (courier) {
+          // (C) claim delivery atomically with { courierId, status: "assigned" }
           await DeliveryTracking.findByIdAndUpdate(deliveryTracking.id, { courierId: courier.id, status: "assigned" });
+
+          // (D) mark courier busy
+          await Courier.findByIdAndUpdate(courier.id, { status: "busy", isAvailable: false });
         }
-        // (D) mark courier busy, save acceptedAt
       }
     });
   }

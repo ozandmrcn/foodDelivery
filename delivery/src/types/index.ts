@@ -61,7 +61,7 @@ export interface ILocation {
 // orderId is a VALUE reference to the order service's document (no join).
 export interface IDeliveryTracking extends Document {
   orderId: Types.ObjectId | string;
-  courierId: Types.ObjectId | string;
+  courierId?: Types.ObjectId | string | null; // null until a courier claims the order
   status: DeliveryStatus | "pending" | "ready"; // union: also accepts the
   // pre-courier states that arrive from rabbitmq events.
   location?: ILocation;
