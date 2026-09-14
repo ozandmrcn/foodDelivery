@@ -48,7 +48,7 @@ export interface IJwtPayload {
   exp?: number;
 }
 
-// Teslimat — the delivery progress states (model + dto must match).
+// the delivery progress states (model + dto must match).
 export type DeliveryStatus = "assigned" | "picked_up" | "in_transit" | "delivered" | "failed";
 
 // A GPS point (note: "longtitude" mirrors the typo used in the models/schemas).
@@ -73,7 +73,7 @@ export interface IDeliveryTracking extends Document {
   updatedAt: Date;
 }
 
-// Kurye — a courier document.
+// Courier - a courier document.
 export type CourierStatus = "available" | "busy" | "offline";
 
 export interface ICourier extends Document {
@@ -83,16 +83,17 @@ export interface ICourier extends Document {
   password: string;
   phone: string;
   vehicleType: "motorcycle" | "bicycle" | "car";
-  vehiclePlate?: string | undefined;
+  vehiclePlate?: string;
   status: CourierStatus;
   isAvailable: boolean;
   role: "courier" | "admin";
-  location?: ILocation[] | undefined; // position history
+  location?: ILocation[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Sipariş Tipleri — order payload types (copied so the rabbitmq consumer can
+// Delivery Types
+// Order status types (copied so the rabbitmq consumer can
 // parse the JSON messages published by the ORDER service).
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "on_the_way" | "delivered" | "cancelled";
 

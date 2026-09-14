@@ -50,6 +50,7 @@
 import type { Channel, ChannelModel } from "amqplib";
 import amqp from "amqplib";
 import type { IOrder } from "./types/index.ts";
+import { Courier, DeliveryTracking } from "./delivery.model.ts";
 
 class RabbitMQService {
   private connection: ChannelModel | null = null;
@@ -109,32 +110,31 @@ class RabbitMQService {
     this.channel.consume(this.deliveryQueue, async (message) => {
       // message.content = Buffer -> toString() -> JSON.parse to reconstruct
       // the original object the producer sent (the IOrder document payload).
-      const deliveryMessage = JSON.parse(message!.content.toString()) as IOrder;
+      // NB: the producer's toJSON transform renames _id -> id, so the parsed
+      // payload carries `id` on order.created (and `orderId` on order.ready).
+      const deliveryMessage = JSON.parse(message!.content.toString()) as IOrder & { id?: string };
+      const orderId = deliveryMessage._id?.toString() ?? deliveryMessage.id;
 
       // ══════════════════════════════════════════════════════════════════
-      // TODO (intended flow — currently empty, explained in the file header):
       // if delivery status is pending create a new delivery tracking
       if (deliveryMessage.status === "pending") {
         // (A) Create DeliveryTracking { orderId, status: "pending" }
+        const deliveryTracking = await DeliveryTracking.create({
+          orderId,
+          status: "pending",
+          estimatedDeliveryTime: new Date(Date.now() + 60 * 60 * 1000),
+          ...(deliveryMessage.specialInstructions && { notes: deliveryMessage.specialInstructions }),
+        });
+
         // (B) Find an available courier
+        const courier = await Courier.findOne({ status: "available", isAvailable: true }).sort({ createdAt: 1 });
+
         // (C) claim delivery atomically with { courierId, status: "assigned" }
+        if (courier) {
+          await DeliveryTracking.findByIdAndUpdate(deliveryTracking.id, { courierId: courier.id, status: "assigned" });
+        }
         // (D) mark courier busy, save acceptedAt
       }
-
-      // find a courier which is available
-      // -> Courier.findOne({ isAvailable: true }) once a courier base exists.
-
-      // bind courier to order
-      // -> Courier.findByIdAndUpdate(courierId, { status: "busy" })
-
-      // make delivery status assigned
-      // -> DeliveryTracking.findOneAndUpdate({ orderId }, { courierId, status: "assigned" })
-
-      // if delivery status ready update delivery tracking
-      // -> if (deliveryMessage.status === "ready") {
-      //      DeliveryTracking.findOneAndUpdate({ orderId }, { status: "ready",
-      //        estimatedDeliveryTime: deliveryMessage.estimatedDeliveryTime })
-      //    }
     });
   }
 }

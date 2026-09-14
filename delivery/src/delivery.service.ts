@@ -62,8 +62,13 @@ class AuthService {
     // bcrypt.hash(password, 12) — same "salt rounds" technique as auth service.
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
+    // `vehiclePlate` is optional -> spread it only when actually provided,
+    // otherwise exactOptionalPropertyTypes rejects the `undefined` value.
+    const { vehiclePlate, ...rest } = data;
+
     const courier = await Courier.create({
-      ...data, // DTO-validated fields
+      ...rest,
+      ...(vehiclePlate !== undefined && { vehiclePlate }),
       password: hashedPassword,
       role: "courier", // FORCED: registration can never assign admin!
       status: "offline", // starts offline; courier must set "available"
