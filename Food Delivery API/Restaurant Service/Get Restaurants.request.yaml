@@ -1,0 +1,40 @@
+$kind: http-request
+description: |-
+  ### 📋 List Restaurants
+  Queries restaurants with pagination and filters.
+url: "{{baseUrl}}/api/restaurants?limit=10&page=1"
+method: GET
+queryParams:
+  - key: limit
+    value: "10"
+  - key: page
+    value: "1"
+  - key: category
+    value: Burger
+    disabled: true
+  - key: rating
+    value: "4"
+    disabled: true
+  - key: deliveryTime
+    value: "40"
+    disabled: true
+  - key: minOrder
+    value: "20"
+    disabled: true
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test('Response has items array', function () {
+          var res = pm.response.json();
+          pm.expect(res).to.have.property('items').that.is.an('array');
+      });
+    language: text/javascript
+order: 3000

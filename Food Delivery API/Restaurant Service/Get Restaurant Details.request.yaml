@@ -1,0 +1,20 @@
+$kind: http-request
+description: |-
+  ### ℹ️ Get Restaurant Details
+  Fetches restaurant by ID.
+url: "{{baseUrl}}/api/restaurants/:id"
+method: GET
+pathVariables:
+  id: "{{restaurantId}}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 4000

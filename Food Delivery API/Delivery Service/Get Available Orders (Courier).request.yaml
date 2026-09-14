@@ -1,0 +1,18 @@
+$kind: http-request
+description: |-
+  ### 📦 Get Available Delivery Orders
+  Courier endpoint to list ready orders waiting for delivery pickup.
+url: "{{baseUrl}}/api/delivery/orders"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{courierToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 5000

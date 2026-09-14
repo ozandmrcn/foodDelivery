@@ -1,0 +1,3 @@
+$kind: collection
+description: Courier management, status updates, available delivery orders, tracking, and delivery lifecycle.
+order: 4000

@@ -1,0 +1,42 @@
+$kind: http-request
+description: |-
+  ### 👤 Register User
+  Registers a new user (admin/customer/restaurant_owner).
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        "email": "{{userEmail}}",
+        "password": "password123",
+        "firstName": "Ozan",
+        "lastName": "Demircan",
+        "phone": "+12125550199",
+        "role": "admin"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Always generate fresh email for Register to avoid duplicate key errors
+      pm.collectionVariables.set('userEmail', 'user_' + Date.now() + '@delivery.com');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created or 200 OK', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      if (pm.response.code === 201 || pm.response.code === 200) {
+          var res = pm.response.json();
+          if (res.result && res.result.data) {
+              if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);
+              if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);
+              if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);
+              console.log('✅ Registered User ID:', res.result.data.user.id);
+          }
+      }
+    language: text/javascript
+order: 1000

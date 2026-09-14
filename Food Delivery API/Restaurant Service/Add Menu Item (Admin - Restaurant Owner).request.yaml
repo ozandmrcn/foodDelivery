@@ -1,0 +1,58 @@
+$kind: http-request
+name: Add Menu Item (Admin / Restaurant Owner)
+description: |-
+  ### 🍔 Add Menu Item
+  Adds a menu item to the restaurant.
+url: "{{baseUrl}}/api/restaurants/:id/menu"
+method: POST
+headers:
+  Content-Type: application/json
+pathVariables:
+  id: "{{restaurantId}}"
+body:
+  type: json
+  content: |-
+    {
+        "name": "Whopper Meal",
+        "description": "Flame-grilled beef patty with juicy tomatoes, lettuce, mayo and pickles on a sesame seed bun.",
+        "price": 12.99,
+        "category": "Burgers",
+        "imageUrl": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd",
+        "ingredients": [
+            "Flame-Grilled Beef Patty",
+            "Sesame Bun",
+            "Lettuce",
+            "Tomato",
+            "Pickles",
+            "Mayonnaise"
+        ],
+        "allergens": [
+            "Gluten",
+            "Sesame",
+            "Eggs"
+        ],
+        "isVegetarian": false,
+        "isAvailable": true,
+        "preparationTime": 15
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 or 201', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      if (pm.response.code === 200 || pm.response.code === 201) {
+          var res = pm.response.json();
+          var mId = res.id || res._id;
+          if (mId) {
+              pm.collectionVariables.set('menuItemId', mId);
+              console.log('🍔 Menu Item ID saved:', mId);
+          }
+      }
+    language: text/javascript
+order: 2000

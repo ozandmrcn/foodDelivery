@@ -1,0 +1,3 @@
+$kind: collection
+description: Order placement, detail fetching, order history, and lifecycle status management.
+order: 3000

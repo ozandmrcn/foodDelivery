@@ -1,0 +1,20 @@
+$kind: http-request
+description: |-
+  ### 🛵 Accept Delivery Order
+  Courier accepts the assigned order.
+url: "{{baseUrl}}/api/delivery/orders/:orderId/accept"
+method: POST
+pathVariables:
+  orderId: "{{orderId}}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{courierToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 6000

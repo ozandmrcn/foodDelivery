@@ -1,0 +1,31 @@
+$kind: http-request
+description: |-
+  ### 📍 Add Address
+  Adds a delivery address to the current user profile.
+url: "{{baseUrl}}/api/auth/add-address"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        "title": "Home",
+        "address": "123 Main Street, Apt 4B",
+        "city": "New York",
+        "district": "Manhattan",
+        "postalCode": 10001,
+        "isDefault": true
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 5000

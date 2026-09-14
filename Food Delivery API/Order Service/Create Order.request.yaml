@@ -1,0 +1,53 @@
+$kind: http-request
+description: |-
+  ### 🛒 Place Order
+  Creates order using current `restaurantId` and `menuItemId`.
+url: "{{baseUrl}}/api/order"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        "restaurantId": "{{restaurantId}}",
+        "items": [
+            {
+                "productId": "{{menuItemId}}",
+                "name": "Whopper Meal",
+                "price": 12.99,
+                "quantity": 2
+            }
+        ],
+        "deliveryAddress": {
+            "title": "Home",
+            "address": "123 Main Street, Apt 4B",
+            "city": "New York",
+            "district": "Manhattan",
+            "postalCode": "10001",
+            "isDefault": true
+        },
+        "paymentMethod": "credit_card",
+        "specialInstructions": "Please do not ring the doorbell, baby is sleeping."
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 or 201', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      if (pm.response.code === 200 || pm.response.code === 201) {
+          var res = pm.response.json();
+          var oId = res.id || res._id;
+          if (oId) {
+              pm.collectionVariables.set('orderId', oId);
+              console.log('📦 Order ID saved:', oId);
+          }
+      }
+    language: text/javascript
+order: 1000
