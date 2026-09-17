@@ -1,18 +1,18 @@
-// ============================================================================
-// 📌 RESTAURANT SERVICE — DTO & VALIDATION (restaurant.dto.ts)
-// ============================================================================
-// Zod schemas for restaurant + menu item requests + query filters + inferred
-// TS types. NOTE: error messages below are in TURKISH (intentional for this
-// project); only the comments have been added in English.
-//
-// QUERY PARSING TRICK: `z.coerce.number()` converts the STRING values arriving
-// in req.query (HTTP query params are always strings!) into real numbers.
-// Without it, `?rating=4` would stay the string "4" and break comparisons.
-// ============================================================================
+/* @file restaurant.dto.ts — Zod schemas + inferred types for the Restaurant service.
+ * Schemas for restaurant + menu item requests, query filters, and the inferred
+ * TS types.
+ *
+ * @note The user-facing error messages in the schemas are intentionally Turkish;
+ *   only the surrounding code/comments are in English.
+ *
+ * Query parsing trick: z.coerce.number() converts the STRING values arriving in
+ * req.query (HTTP query params are always strings) into real numbers — without
+ * it, `?rating=4` would stay the string "4" and break comparisons.
+ */
 
 import z from "zod";
 
-// openingHoursSchema
+// * openingHoursSchema
 const openingHoursSchema = z.object({
   monday: z.string().min(1, "Pazartesi çalışma saatleri zorunldur"),
   tuesday: z.string().min(1, "Salı çalışma saatleri zorunldur"),
@@ -23,7 +23,7 @@ const openingHoursSchema = z.object({
   sunday: z.string().min(1, "Pazar çalışma saatleri zorunldur"),
 });
 
-// restaurantSchema
+// * restaurantSchema
 const restaurantSchema = z.object({
   name: z.string().min(1, "Restoran adı zorunludur"),
   description: z.string().min(10, "Açıklama en az 10 karakter olmalıdır"),
@@ -40,10 +40,10 @@ const restaurantSchema = z.object({
   rating: z.number().min(0, "Puan 0'dan küçük olamaz").max(5, "Puan 5'ten büyük olamaz").optional(),
   isActive: z.boolean().default(true),
   isOpen: z.boolean().default(true),
-  openingHours: openingHoursSchema, // nested schema reused as a field
+  openingHours: openingHoursSchema, // @embed nested schema reused as a field
 });
 
-// menuItemSchema
+// * menuItemSchema
 const menuItemSchema = z.object({
   name: z.string().min(1, "Ürün adı zorunludur"),
   description: z.string().min(5, "Açıklama en az 5 karakter olmalıdır"),
@@ -60,8 +60,8 @@ const menuItemSchema = z.object({
     .max(120, "Hazırlama süresi en fazla 120 dakika olmalıdır"),
 });
 
-// query params schema — for GET / (list) endpoints.
-// All numeric filters are .coerce to convert string query params to numbers.
+// * query params schema — for GET / (list) endpoints.
+// @note All numeric filters use .coerce to turn string query params into numbers.
 const queryParamsSchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -71,14 +71,19 @@ const queryParamsSchema = z.object({
   minOrder: z.coerce.number().min(0).optional(),
 });
 
-// export type — TS types auto-derived from the schemas (single source of truth).
+// @typedef Inferred types — derived from the schemas (single source of truth)
 export type RestaurantInput = z.infer<typeof restaurantSchema>;
 export type MenuItemInput = z.infer<typeof menuItemSchema>;
 export type OpeningHoursInput = z.infer<typeof openingHoursSchema>;
 export type QueryParamsInput = z.infer<typeof queryParamsSchema>;
 
-// Function to validate data against a schema
-// Generic <T>: each schema passed yields a differently-typed result.
+/**
+ * Validate untrusted data against any Zod schema.
+ * @param schema - The Zod schema to validate against
+ * @param data - Raw input, e.g. req.body or req.query
+ * @returns The validated data typed as <T>
+ * @throws {Error} A single descriptive message on the first Zod error
+ */
 async function validateDto<T>(schema: z.ZodSchema<T>, data: unknown): Promise<T> {
   try {
     return schema.parse(data);

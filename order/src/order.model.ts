@@ -1,34 +1,22 @@
-// ============================================================================
-// 📌 ORDER SERVICE — MONGOOSE MODELS (order.model.ts)
-// ============================================================================
-// Defines the shape of an Order document. KEY LESSONS:
-//
-// 1. EMBEDDED SCHEMAS: `orderItemSchema` and `addressSchema` are embedded
-//    inside the order (subdocuments). No separate "items" collection needed.
-//
-// 2. `_id: false`: order items and address have NO own _id — they are pure
-//    value objects inside the order. Setting `_id: false` keeps the document
-//    smaller and cleaner.
-//
-// 3. ENUM = nothing more than a STRING allowed-list enforced by MongoDB.
-//    If someone tries to save status "created" (not in the enum), Mongo throws.
-//    Keep these enum values IN SYNC with the Zod enum in order.dto.ts — the
-//    Zod layer validates early (nice error), the Mongo enum is the last guard.
-//
-// 4. REFERENCES vs EMBEDDING:
-//    - userId / restaurantId are stored as ObjectId REFERENCES to documents
-//      that live in OTHER services' databases (auth service, restaurant
-//      service). There is NO foreign-key enforcement; the ref is by convention.
-//      This is sameness the "database per service" pattern produces.
-// ============================================================================
+/* @file order.model.ts — Mongoose models for the Order service.
+ * Defines the Order document with embedded subdocuments (items + address).
+ *
+ * Key lessons:
+ * 1. EMBEDDING: items and the delivery address live INSIDE the order — no
+ *    separate collections, no joins.
+ * 2. _id: false — subdocuments are pure value objects; keeps the doc lean.
+ * 3. ENUM = string allow-list enforced by MongoDB — must stay in sync with the
+ *    Zod enum in order.dto.ts (Zod validates early, Mongo is the last guard).
+ * 4. REFERENCES: userId/restaurantId point at objects in OTHER services' DBs
+ *    by convention only — there are no foreign keys (database-per-service).
+ */
 
 import mongoose, { model, Schema } from "mongoose";
 import type { Address, IOrder, OrderItem } from "./types/index.ts";
 
-// order item type
-// A single line in the order: what product, how many, at what unit price.
-// NOTE: price + name are COPIED into the order at creation time, so future
-// menu price changes don't rewrite the order history (immutable snapshot).
+// * orderItemSchema — one basket line: product + name + price + quantity
+// @snapshot price and name are COPIED in at creation, so future menu changes
+// never rewrite order history (immutable history).
 const orderItemSchema = new Schema<OrderItem>(
   {
     productId: { type: Schema.Types.ObjectId, required: true },
@@ -41,9 +29,9 @@ const orderItemSchema = new Schema<OrderItem>(
   },
 );
 
-// order delivery address type
-// The address is also snapshotted here (not fetched later) — the delivery
-// courier needs exactly this point, even if the user changes their address.
+// * addressSchema — delivery point snapshotted into the order
+// @snapshot Stored at order time so the courier always has the exact address,
+// even if the user edits their profile later.
 const addressSchema = new Schema<Address>(
   {
     title: { type: String },
@@ -56,17 +44,17 @@ const addressSchema = new Schema<Address>(
   { _id: false },
 );
 
-// order model
+// @schema orderSchema — one document = one placed order
 const orderSchema = new Schema<IOrder>(
   {
-    userId: { type: Schema.Types.ObjectId, required: true }, // ref to auth service user
-    restaurantId: { type: Schema.Types.ObjectId, required: true }, // ref to restaurant service restaurant
+    userId: { type: Schema.Types.ObjectId, required: true }, // @ref auth service user
+    restaurantId: { type: Schema.Types.ObjectId, required: true }, // @ref restaurant service
     items: { type: [orderItemSchema], required: true },
-    totalAmount: { type: Number, required: true, min: 0 }, // computed server-side
+    totalAmount: { type: Number, required: true, min: 0 }, // @note computed server-side
     deliveryAddress: { type: addressSchema, required: true },
     paymentMethod: { type: String, required: true, enum: ["credit_card", "cash", "online"] },
-    // ⭐ THE ORDER STATE MACHINE — every valid state, in the life cycle
-    //   pending -> confirmed -> preparing -> ready -> on_the_way -> delivered
+    // @field status — the order state machine (must match dto + types enums):
+    //   pending -> confirmed -> preparing -> ready -> on_the_way -> delivered / cancelled
     status: {
       type: String,
       required: true,
@@ -75,9 +63,9 @@ const orderSchema = new Schema<IOrder>(
     specialInstructions: { type: String },
   },
   {
-    timestamps: true, // auto createdAt + updatedAt
+    timestamps: true, // auto-manages createdAt + updatedAt
     toJSON: {
-      // Friendly JSON shape: `_id` -> `id`, drop internal fields (`_id`,`__v`).
+      // @note Friendly JSON shape: `_id` -> `id`, drop internal `_id`/`__v`.
       transform: function (doc: any, ret: any) {
         ret.id = ret._id;
         delete ret._id;
@@ -87,5 +75,5 @@ const orderSchema = new Schema<IOrder>(
   },
 );
 
-// model
+// @model Order — compiled model bound to the `orders` collection
 export const Order = mongoose.model("Order", orderSchema);

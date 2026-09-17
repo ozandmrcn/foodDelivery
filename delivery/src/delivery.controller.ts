@@ -1,16 +1,10 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — CONTROLLER LAYER (delivery.controller.ts)
-// ============================================================================
-// HTTP interface layer: validate request input -> call service -> JSON response.
-//
-// Note the pattern used to identify "who is acting":
-//   - courier-specific actions (status, accept, update status) use
-//     `req.user?.userId` — set from the JWT by the authenticate middleware.
-//   - admin views (performance) pass the courierId from req.params.
-//
-// `catchAsync` wraps every handler so thrown errors reach the app.ts error
-// middleware instead of crashing the process.
-// ============================================================================
+/* @file delivery.controller.ts — HTTP interface layer of the Delivery service.
+ * Only: validate input -> call service -> send JSON. Identity comes from the
+ * JWT payload (req.user?.userId) for courier actions; admin views pass the
+ * courierId via the URL path.
+ *
+ * @see delivery.service.ts for business logic; errors are forwarded by catchAsync.
+ */
 
 import type { RouteParams } from "./types/index.ts";
 import DeliveryService from "./delivery.service.ts";
@@ -26,7 +20,8 @@ import {
 import deliveryService from "./delivery.service.ts";
 
 class DeliveryController {
-  // POST /couriers/register (public — no token needed)
+  // @route POST /couriers/register — public
+  /** Register a courier and set their access token as an httpOnly cookie. */
   register = catchAsync(async (req, res) => {
     const registerData = await validateDto(courierRegisterSchema, req.body);
 
@@ -41,7 +36,8 @@ class DeliveryController {
     res.status(201).json(result);
   });
 
-  // POST /couriers/login (public)
+  // @route POST /couriers/login — public
+  /** Login a courier and set their access token cookie. */
   login = catchAsync(async (req, res) => {
     const loginData = await validateDto(courierLoginSchema, req.body);
 
@@ -56,10 +52,11 @@ class DeliveryController {
     res.status(200).json(result);
   });
 
-  // PATCH /couriers/status (protected: courier role only)
+  // @route PATCH /couriers/status — protected (courier only)
+  /** Update the authenticated courier's availability. */
   updateCourierStatus = catchAsync(async (req, res) => {
     const statusData = await validateDto(courierStatusUpdateSchema, req.body);
-    // The COURIER updates THEIR OWN status — id comes from the token, not body.
+    // ! The courier updates THEIR OWN status — id comes from the token, never body.
     const courierId = req.user?.userId as string;
 
     const result = await deliveryService.updateCourierStatus(courierId, statusData);
@@ -67,9 +64,9 @@ class DeliveryController {
     res.status(200).json(result);
   });
 
-  // GET /couriers/:courierId/performance (protected: admin role only)
+  // @route GET /couriers/:courierId/performance — protected (admin only)
+  /** Admin view: fetch a courier's delivery metrics. */
   getCourierPerformance = catchAsync(async (req, res) => {
-    // For an admin, the target courier comes from the URL path.
     const { courierId } = req.params as { courierId: string };
 
     const result = await deliveryService.getCourierPerformance(courierId);
@@ -77,14 +74,16 @@ class DeliveryController {
     res.status(200).json(result);
   });
 
-  // GET /orders (protected: courier role only) -> which orders are up for grabs
+  // @route GET /orders — protected (courier only)
+  /** List deliveries still waiting for a courier. */
   getAvailableOrders = catchAsync(async (req, res) => {
     const result = await deliveryService.getAvailableOrders();
 
     res.status(200).json(result);
   });
 
-  // POST /orders/:orderId/accept (protected: courier role only)
+  // @route POST /orders/:orderId/accept — protected (courier only)
+  /** Claim a delivery for the authenticated courier. */
   acceptDelivery = catchAsync(async (req, res) => {
     const { orderId } = req.params as { orderId: string };
 
@@ -96,7 +95,8 @@ class DeliveryController {
     res.status(200).json(result);
   });
 
-  // PATCH /orders/:orderId/status (protected: courier role only)
+  // @route PATCH /orders/:orderId/status — protected (courier only)
+  /** Advance the delivery progress (picked_up -> in_transit -> delivered). */
   updateDeliveryStatus = catchAsync(async (req, res) => {
     const deliveryData = await validateDto(deliveryStatusUpdateSchema, req.body);
 
@@ -109,7 +109,8 @@ class DeliveryController {
     res.status(200).json(result);
   });
 
-  // GET /orders/:orderId/tracking (protected: any logged-in user) -> for CUSTOMERS
+  // @route GET /orders/:orderId/tracking — protected (any logged-in user)
+  /** Customer view: read-only live tracking of a delivery. */
   trackDelivery = catchAsync(async (req, res) => {
     const { orderId } = req.params as { orderId: string };
 

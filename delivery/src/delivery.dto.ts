@@ -1,17 +1,13 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — DTO & VALIDATION (delivery.dto.ts)
-// ============================================================================
-// Zod schemas for every delivery/courier request body + inferred TS types.
-// Highlights worth remembering:
-//   - The `location` object is reused in several schemas -> consistent GPS shape.
-//   - Coordinates get GEO range checks: latitude -90..90, longitude -180..180.
-//   - `.enum([...])` restricts statuses to the same values the MongoDB ENUMs use
-//     in delivery.model.ts — keep the two in sync!
-// ============================================================================
+/* @file delivery.dto.ts — Zod schemas + inferred types for the Delivery service.
+ * Highlights worth remembering:
+ *   - `location` is a reused GPS shape across several schemas.
+ *   - Coordinates get GEO range checks (lat -90..90, lng -180..180).
+ *   - .enum([...]) must mirror the MongoDB enums in delivery.model.ts.
+ */
 
 import { z } from "zod";
 
-// courier register
+// * courier register
 const courierRegisterSchema = z.object({
   email: z.email("Please enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -23,13 +19,13 @@ const courierRegisterSchema = z.object({
   isAvailable: z.boolean().default(true),
 });
 
-// courier login
+// * courier login
 const courierLoginSchema = z.object({
   email: z.email("Please enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-// courier status update
+// * courier status update
 const courierStatusUpdateSchema = z.object({
   status: z.enum(["available", "busy", "offline"]),
   location: z
@@ -37,10 +33,10 @@ const courierStatusUpdateSchema = z.object({
       latitude: z.number().min(-90).max(90, "Please enter a valid latitude value"),
       longtitude: z.number().min(-180).max(180, "Please enter a valid longitude value"),
     })
-    .optional(), // GPS point appended to the courier's location history
+    .optional(), // @note GPS point appended to the courier's location history
 });
 
-// delivery status update — the courier progress steps
+// * delivery status update — courier progress steps
 const deliveryStatusUpdateSchema = z.object({
   status: z.enum(["assigned", "picked_up", "in_transit", "delivered", "failed"]),
   location: z
@@ -54,7 +50,7 @@ const deliveryStatusUpdateSchema = z.object({
   notes: z.string().optional(),
 });
 
-// courier performance
+// * courier performance
 const courierPerformanceSchema = z.object({
   deliveriesCompleted: z.number().min(0, "Completed deliveries count must be at least 0"),
   averageRating: z.number().min(0).max(5, "Average rating must be between 0 and 5"),
@@ -62,7 +58,7 @@ const courierPerformanceSchema = z.object({
   period: z.enum(["daily", "weekly", "monthly"]),
 });
 
-// location update
+// * location update
 const locationUpdateSchema = z.object({
   latitude: z.number().min(-90).max(90, "Please enter a valid latitude value"),
   longtitude: z.number().min(-180).max(180, "Please enter a valid longitude value"),
@@ -79,7 +75,7 @@ export {
   locationUpdateSchema,
 };
 
-// type inference — TS types auto-derived from the schemas (single source of truth)
+// @typedef Inferred types — TS types derived from the schemas (one source of truth)
 export type CourierRegisterInput = z.infer<typeof courierRegisterSchema>;
 export type CourierLoginInput = z.infer<typeof courierLoginSchema>;
 export type CourierStatusUpdateInput = z.infer<typeof courierStatusUpdateSchema>;
@@ -87,8 +83,13 @@ export type DeliveryStatusUpdateInput = z.infer<typeof deliveryStatusUpdateSchem
 export type CourierPerformanceInput = z.infer<typeof courierPerformanceSchema>;
 export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
 
-// Function to validate data against a schema
-// Generic <T>: each schema passed here yields a differently-typed result.
+/**
+ * Validate untrusted data against any Zod schema.
+ * @param schema - The Zod schema to validate against
+ * @param data - Raw input, e.g. req.body
+ * @returns The validated data typed as <T>
+ * @throws {Error} A single descriptive message on the first Zod error
+ */
 export async function validateDto<T>(schema: z.ZodSchema<T>, data: unknown): Promise<T> {
   try {
     return schema.parse(data);

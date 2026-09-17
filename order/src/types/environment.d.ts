@@ -1,14 +1,11 @@
-// ============================================================================
-// 📌 ENVIRONMENT & REQUEST TYPE AUGMENTATION (environment.d.ts)
-// ============================================================================
-// Thin wrapper: adds our env vars to NodeJS.ProcessEnv and augments
-// Express.Request so that `req.user` is typed as { userId, role } for THIS
-// service (unlike the auth service, which types req.user as full IUser).
-//
-// `declare global` + `export {}` (module marker) = declaration merging:
-// we REOPEN the existing interfaces from @types/node and @types/express and
-// add our custom fields. Without the module marker this silently does nothing.
-// ============================================================================
+/* @file environment.d.ts — Typed env vars + Express.Request augmentation.
+ * Re-opens existing interfaces via declaration merging so:
+ *   1. process.env.* reads are typed strings (no repeated null checks)
+ *   2. req.user is recognized everywhere WITHOUT casting
+ *
+ * @note Unlike the auth service, HERE req.user is only the DECODED JWT payload
+ *   { userId, role } — no DB lookup happens in this service's middleware.
+ */
 
 import type { IUser } from "./index.ts";
 
@@ -27,7 +24,6 @@ declare global {
 
   namespace Express {
     interface Request {
-      // NOTE: here only the DECODED PAYLOAD, not the full user document.
       user?: {
         userId: string;
         role: UserRole;
@@ -36,5 +32,5 @@ declare global {
   }
 }
 
-// Marks this file as a module so `declare global` works.
+// Marks this file as a module so `declare global` applies project-wide.
 export {};

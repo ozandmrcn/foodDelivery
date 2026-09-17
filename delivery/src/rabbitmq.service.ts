@@ -1,51 +1,20 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — RABBITMQ CONSUMER (rabbitmq.service.ts)
-// ============================================================================
-// ⭐ THE COUNTERPART OF THE ORDER SERVICE PRODUCER — READ THIS COMPARISON ⭐
-//
-// ORDER SERVICE (producer)          |  DELIVERY SERVICE (consumer)
-// --------------------------------- |  ----------------------------------
-// publishOrderCreated(order)        |  channel.consume(deliveryQueue, cb)
-// publishOrderReady(order)          |  callback receives { orderId, ... }
-// -> pushes messages ONTO the bus   |  -> POLLS the queue for messages
-//
-// HOW CONSUME WORKS (the magic):
-// -------------------------------
-//   this.channel.consume(queue, handler)
-// RabbitMQ pushes messages from the queue to this callback one by one.
-// The handler receives a `message` object; `message.content` is a Buffer
-// containing the JSON payload that the producer serialized.
-//
-// THE BUS ACKNOWLEDGES (ack) THE MESSAGE:
-// By default, consuming marks messages as "acknowledged" automatically
-// (autoAck). Once acked, the message is DELETED from the queue — meaning if
-// the handler crashes mid-processing, the message is lost. In production you
-// would use { noAck: false } and call message.ack() / nack() explicitly to
-// retry failed messages. Worth remembering!
-//
-// THE EMPTY `if (deliveryMessage.status === "pending")` BLOCK BELOW:
-// ------------------------------------------------------------------
-// This block is currently EMPTY on purpose — the logic that assigns a courier
-// is not implemented yet. When you come back to this project, THIS is where
-// the "order.created" flow continues. The intended behavior (in exact order):
-//
-//   1. if status === "pending"  -> a NEW order just entered the system.
-//      a) Create a DeliveryTracking document { orderId, status: "pending" }
-//         in the delivery database, so the order becomes trackable.
-//      b) Find an AVAILABLE courier: Courier.findOne({ isAvailable: true,
-//         status: "available" }).
-//      c) OPTIMISTIC CLAIM: findOneAndUpdate the delivery with
-//         { courierId, status: "assigned" } guarded by courierId: { $exists: false }
-//         — this atomic guard prevents TWO couriers claiming the same order.
-//      d) Mark the courier busy / save the acceptedAt timestamp.
-//
-//   2. if status === "ready"     -> restaurant finished preparing; update the
-//      DeliveryTracking document (status: "ready") so the courier can pick it up.
-//
-// In short: order.service PUBLISHES order.created / order.ready, and this
-// consume callback is the receiving end that keeps the delivery service in
-// sync with the rest of the system WITHOUT any HTTP call between the two.
-// ============================================================================
+/* @file rabbitmq.service.ts — RabbitMQ CONSUMER of the Delivery service.
+ * Counterpart of the Order service producer:
+ *   ORDER (producer): publishOrderCreated / publishOrderReady -> pushes events
+ *   DELIVERY (consumer): channel.consume(deliveryQueue, cb) -> reacts to events
+ *
+ * How consume works: RabbitMQ pushes each queued message to the callback one
+ * at a time; message.content is the Buffer holding the producer's JSON payload.
+ *
+ * @note ACK semantics: default (autoAck) deletes the message from the queue
+ *   as soon as it is delivered — if the handler crashes mid-processing the
+ *   message is lost. Production typically uses { noAck: false } + explicit
+ *   message.ack()/nack() to enable retries.
+ *
+ * The handler below is where the "order.created" flow continues: it creates a
+ * DeliveryTracking doc, finds an available courier, and assigns atomically —
+ * keeping this service in sync WITHOUT any HTTP call to the order service.
+ */
 
 import type { Channel, ChannelModel } from "amqplib";
 import amqp from "amqplib";
@@ -55,38 +24,42 @@ import { Courier, DeliveryTracking } from "./delivery.model.ts";
 class RabbitMQService {
   private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
-  // SAME names as the order service's rabbitmq file = the shared contract.
+  // @contract SAME names as the order service's file = the inter-service contract.
   private readonly exchangeName = "food_delivery_exchange";
   private readonly orderQueue = "order_queue";
   private readonly deliveryQueue = "delivery_queue";
 
+  /**
+   * Connect, declare the topology, and start consuming.
+   * @throws {Error} Logged but not rethrown; the service keeps running
+   */
   async initialize(): Promise<void> {
     try {
+      // @env RABBITMQ_URL — default to the local broker
       const url = process.env.RABBITMQ_URL || "amqp://localhost:5672";
 
-      // Connect to broker
+      // * Connect to the broker (one TCP connection).
       this.connection = await amqp.connect(url);
 
-      // Create channel
+      // * Create a channel on top of the connection.
       this.channel = await this.connection.createChannel();
 
-      // Create exchange (must use the SAME name/type as the producer!)
-      // type:topic => allows routing based on pattern matching (ex. order.* => order.created, order.updated)
-      // durable:true => exchange will survive broker restart
+      // * Create the SAME topic exchange as the producer:
+      //   type topic => pattern-based routing (order.* matches order.created)
+      //   durable   => survives broker restart
       await this.channel.assertExchange(this.exchangeName, "topic", {
         durable: true,
       });
 
-      // Create queues
+      // * Create queues (durable).
       await this.channel.assertQueue(this.orderQueue, { durable: true });
       await this.channel.assertQueue(this.deliveryQueue, { durable: true });
 
-      /* Bind queues to exchange — delivery_queue listens for order.created
-       and order.ready events published by the ORDER service. */
+      // * Bind: this queue subscribes to events published by the order service.
       await this.channel.bindQueue(this.deliveryQueue, this.exchangeName, "order.created");
       await this.channel.bindQueue(this.deliveryQueue, this.exchangeName, "order.ready");
 
-      // Start listening to delivery queue
+      // * Start listening — the process stays "on" from this moment on.
       await this.listenToDeliveryQueue();
 
       console.log("Delivery service rabbitmq initialized");
@@ -95,26 +68,26 @@ class RabbitMQService {
     }
   }
 
-  // ---------------------------------------------------------------
-  // THE CONSUMER — the only part that differs from the order service.
-  // ---------------------------------------------------------------
-  // What happens on the bus tour:
-  //   [Order svc publishes "order.created"] -> exchange routes it ->
-  //   delivery_queue -> THIS callback fires with the message payload.
+  // * THE CONSUMER — the only part that differs from the order service.
+  /**
+   * Register the callback that handles every message on the delivery queue.
+   * @throws {Error} If the channel is not initialized yet
+   */
   async listenToDeliveryQueue(): Promise<void> {
     if (!this.channel) {
       throw new Error("RabbitMQ connection not established. Please initialize RabbitMQ first.");
     }
 
-    // consumer callback: automatically invoked for each queued message.
+    // @consumer Callback fires automatically for each queued message.
     this.channel.consume(this.deliveryQueue, async (message) => {
       const deliveryMessage = JSON.parse(message!.content.toString()) as IOrder & { id?: string };
       const orderId = deliveryMessage._id?.toString() ?? deliveryMessage.id;
 
-      // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-      // if delivery status is pending create a new delivery tracking
+      // * Case 1: "order.created" — a new order just entered the system.
+      // Track it, then find + assign an available courier.
       if (deliveryMessage.status === "pending") {
-        // (A) Create DeliveryTracking { orderId, status: "pending" }
+        // (A) Create DeliveryTracking { orderId, status: "pending" } so the
+        //     order becomes trackable.
         const deliveryTracking = await DeliveryTracking.create({
           orderId,
           courierId: null,
@@ -123,24 +96,24 @@ class RabbitMQService {
           ...(deliveryMessage.specialInstructions && { notes: deliveryMessage.specialInstructions }),
         });
 
-        // (B) Find an available courier
+        // (B) Find the oldest available courier.
         const courier = await Courier.findOne({ status: "available", isAvailable: true }).sort({ createdAt: 1 });
 
         if (courier) {
-          // (C) claim delivery atomically with { courierId, status: "assigned" }
+          // (C) @atomic Claim the delivery: guard { courierId: null } prevents
+          //     two couriers claiming the same order (no locks needed).
           await DeliveryTracking.findByIdAndUpdate(deliveryTracking.id, { courierId: courier.id, status: "assigned" });
 
-          // (D) mark courier busy
+          // (D) @atomic Mark the courier busy.
           await Courier.findByIdAndUpdate(courier.id, { status: "busy", isAvailable: false });
         }
       }
 
-      // if delivery status is ready update the delivery tracking
+      // * Case 2: "order.ready" — restaurant finished; update tracking so the
+      //   courier can pick the order up.
       if (deliveryMessage.status === "ready") {
-        // Update DeliveryTracking { orderId, status: "ready" }
         await DeliveryTracking.findOneAndUpdate({ orderId: deliveryMessage._id }, { status: "ready" });
       }
-      // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
     });
   }
 }

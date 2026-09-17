@@ -1,35 +1,7 @@
-// ============================================================================
-// 📌 AUTH SERVICE — BUSINESS LOGIC LAYER (auth.service.ts)
-// ============================================================================
-// WHAT DOES THE SERVICE DO?
-// -------------------------
-// This is the "brain" of the auth service: all business rules live here.
-// The controller calls service methods like:
-//   authService.register(body)  -> { status, data: { user, tokens } }
-//   authService.login(body)     -> { status, data: { user, tokens } }
-//   authService.refresh(token)  -> { accessToken }
-//
-// WHAT IS JWT (JSON Web Token)?
-// -----------------------------
-// A JWT is a signed string of the form: `header.payload.signature`.
-//   - `header`: algorithm used (e.g. HS256)
-//   - `payload`: the data you put inside (here: { userId, role })
-//   - `signature`: proves the token was signed with YOUR secret key
-//
-// Why JWTs for auth? They are STATELESS: the server does not store sessions.
-// Any server that knows the JWT_SECRET can verify the token without a DB call.
-//
-// ACCESS vs REFRESH TOKENS:
-// -------------------------
-// - Access token:  short-lived (1 hour). Sent on every API request. If stolen,
-//   the damage window is at most 1 hour.
-// - Refresh token: long-lived (7 days). Used ONLY to request a new access token.
-//   This way you don't ask users to log in every hour.
-//
-// NOTE: This service is a SINGLETON (exported as `new AuthService()`).
-//   - No reason to create new instances — it holds no per-request state.
-//   - All state lives in the DB or is passed as function parameters.
-// ============================================================================
+/* @file auth.service.ts — Business logic layer of the Auth service.
+ * Owns registration, login, JWT issuance/refresh and address management.
+ * Controllers call these methods; no Express/DTO concerns live here.
+ */
 
 import type { AddressInput, LoginInput, RegisterInput } from "./auth.dto.ts";
 import User from "./auth.model.ts";
@@ -39,11 +11,13 @@ import jwt from "jsonwebtoken";
 class AuthService {
   constructor() {}
 
-  // -------------------------------------------------------
-  // PRIVATE: generateTokens()
-  // -------------------------------------------------------
-  // Creates both an access token and a refresh token for a given user.
-  // `jwt.sign(payload, secret, options)` returns a signed JWT string.
+  // * PRIVATE: generateTokens()
+  /**
+   * Sign an access + refresh token pair for a user.
+   * @param user - Authenticated user document
+   * @returns Token pair: short-lived accessToken (1h) + long-lived refreshToken (7d)
+   * @note Stateless JWT: any service holding the secret can verify without a DB call.
+   */
   private generateTokens(user: IUser): { accessToken: string; refreshToken: string } {
     const accessToken = jwt.sign({ userId: user?._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "1h",
@@ -56,26 +30,28 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // -------------------------------------------------------
-  // PUBLIC: register()
-  // -------------------------------------------------------
+  // * PUBLIC: register()
+  /**
+   * Register a new user.
+   * @param userData - Validated register input (Zod DTO)
+   * @returns Success envelope with the public user profile + tokens
+   * @throws {Error} When the email is already registered (no password leaks)
+   */
   async register(userData: RegisterInput): Promise<IAuthResponse> {
-    // 1. Check for duplicate email.
+    // Duplicate-email guard before the DB write.
     const email = await User.findOne({ email: userData.email });
 
     if (email) {
       throw new Error("This email is already registered");
     }
 
-    // 2. Create the user. The `pre("save")` hook in the model automatically
-    //    hashes the password before writing to the DB.
+    // @hook pre("save") in the model hashes the password before writing.
     const user = new User(userData);
     await user.save();
 
-    // 3. Generate tokens and return the public user data (no password leaks).
     const tokens = this.generateTokens(user);
 
-    // Datas that will be sent to client
+    // Public projection — the stored password hash never reaches the client.
     return {
       status: "success",
       data: {
@@ -93,11 +69,14 @@ class AuthService {
     };
   }
 
-  // -------------------------------------------------------
-  // PUBLIC: login()
-  // -------------------------------------------------------
-  // Always returns the SAME error message for email OR password failures
-  // to prevent attackers from figuring out which emails are registered.
+  // * PUBLIC: login()
+  /**
+   * Login with email + password.
+   * @param loginData - Validated login input (Zod DTO)
+   * @returns Success envelope with the public user profile + tokens
+   * @throws {Error} "Invalid email or password" for BOTH failures
+   * @note ! Security: identical error message prevents email enumeration.
+   */
   async login(loginData: LoginInput): Promise<IAuthResponse> {
     const user = await User.findOne({ email: loginData.email });
 
@@ -105,8 +84,8 @@ class AuthService {
       throw new Error("Invalid email or password");
     }
 
-    // comparePassword is defined in auth.model.ts on userSchema.methods.
-    // It re-hashes the raw password and compares it to the stored hash.
+    // comparePassword() is defined in auth.model.ts on userSchema.methods —
+    // it re-hashes the raw password and compares it to the stored hash.
     const isPasswordValid = await user.comparePassword(loginData.password);
 
     if (!isPasswordValid) {
@@ -115,7 +94,6 @@ class AuthService {
 
     const tokens = this.generateTokens(user);
 
-    // Datas that will be sent to client
     return {
       status: "success",
       data: {
@@ -133,39 +111,46 @@ class AuthService {
     };
   }
 
-  // -------------------------------------------------------
-  // PUBLIC: refresh()
-  // -------------------------------------------------------
-  // Verifies the REFRESH token (not the access token) and issues a new access token.
-  // This is how the client stays logged in without re-entering credentials.
+  // * PUBLIC: refresh()
+  /**
+   * Exchange a valid refresh token for a new access token.
+   * @param refreshToken - The long-lived token from login/register
+   * @returns A fresh access token (refresh token is NOT re-issued here)
+   * @throws {Error} When the token is invalid or the user no longer exists
+   * @note Production would rotate the refresh token for extra security.
+   */
   async refresh(refreshToken: string): Promise<{ accessToken: string }> {
     const decoded = (await jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET)) as IJwtPayload;
 
-    // Make sure the user still exists (could have been deleted).
+    // Guard: the user may have been deleted since the token was issued.
     const user = await User.findById(decoded.userId);
 
     if (!user) {
       throw new Error("Invalid token");
     }
 
-    // NOTE: we only generate a new ACCESS token, not a new refresh token.
-    // In production you would rotate the refresh token for extra security.
     const tokens = this.generateTokens(user);
 
     return { accessToken: tokens.accessToken };
   }
 
-  // -------------------------------------------------------
-  // PUBLIC: addAddress()
-  // -------------------------------------------------------
+  // * PUBLIC: addAddress()
+  /**
+   * Append an address to the user's embedded addresses array.
+   * @param userId - Target user document id
+   * @param addressData - Validated address input (Zod DTO)
+   * @returns Success envelope with the updated addresses array
+   * @throws {Error} When no user matches the id
+   * @note isDefault handling: at most one address may be default.
+   */
   async addAddress(
     userId: string,
     addressData: AddressInput,
   ): Promise<{ status: string; data: { addresses: IAddress[] | undefined } }> {
     const user = await User.findById(userId);
 
-    // If the new address is marked as default, unset default on all others first.
-    // This ensures at most one address has isDefault: true.
+    // When a new address is default, clear isDefault on the existing ones so
+    // at most one address has isDefault: true.
     if (addressData.isDefault) {
       user?.addresses.forEach((address) => {
         address.isDefault = false;
@@ -176,7 +161,7 @@ class AuthService {
       throw new Error("User not found");
     }
 
-    // push() adds the new address to the embedded subdocument array.
+    // @embed addresses — a subdocument array living inside the user document.
     user?.addresses.push(addressData);
     await user?.save();
 
@@ -189,5 +174,5 @@ class AuthService {
   }
 }
 
-// Singleton export: one instance shared across all controllers that import it.
+// @singleton One shared instance across all controllers that import it.
 export default new AuthService();

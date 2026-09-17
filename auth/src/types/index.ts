@@ -1,26 +1,18 @@
-// ============================================================================
-// 📌 AUTH SERVICE — SHARED TYPE DEFINITIONS (types/index.ts)
-// ============================================================================
-// WHAT IS THIS FILE?
-// ------------------
-// A central home for TypeScript interfaces/types used across the auth service
-// (model, service, middleware, controller). This avoids re-declaring shapes.
-//
-// IMPORTANT MICROSERVICE LESSON:
-// ------------------------------
-// These types are COPY-PASTED into every service (order/delivery/restaurant
-// each have their own types/index.ts). There is NO shared "core" package here.
-// In a bigger project you would extract shared types into a published npm
-// package or a monorepo package — but for learning, duplicating is the point:
-// each service is fully independent and can be built/deployed on its own.
-// ============================================================================
+/* @file types/index.ts — Shared type definitions for the Auth service.
+ * Central home for the interfaces used across model, service, middleware and
+ * controller, avoiding re-declaration of the same shapes.
+ *
+ * @note Microservice lesson: these types are COPY-PASTED per service (order,
+ *   delivery, restaurant each ship their own). There is no shared core package —
+ *   that keeps every service independently buildable/deployable.
+ */
 
 import type { Request, Response, NextFunction } from "express";
 
-// Type used by catchAsync: an async Express handler that returns a Promise.
+// @typedef RouteParams — async Express handler signature used by catchAsync
 export type RouteParams = (req: Request, res: Response, next: NextFunction) => Promise<any>;
 
-// Embedded address shape (also declared as a mongoose subdoc in the model).
+// @interface IAddress — embedded subdocument shape (also declared in the model)
 export interface IAddress {
   _id?: string;
   title: string;
@@ -31,12 +23,11 @@ export interface IAddress {
   isDefault: boolean;
 }
 
-// The possible roles a user can have. Influences which routes are allowed
-// (see authorize middleware in other services).
+// @typedef UserRole — the four roles; authorize() elsewhere checks against these
 export type UserRole = "customer" | "restaurant_owner" | "courier" | "admin";
 
-// Document shape for a User. NOTE: extends `Document` -> mongoose document,
-// so instances have _id, save(), comparePassword(), etc.
+// @interface IUser — document shape. Extends Document, so instances expose
+// _id, save(), comparePassword(), etc.
 export interface IUser extends Document {
   _id?: string;
   email: string;
@@ -53,7 +44,7 @@ export interface IUser extends Document {
   comparePassword: (candidatePassword: string) => Promise<boolean>;
 }
 
-// The data carved out of the JWT after verification.
+// @interface IJwtPayload — the data carved out of a verified JWT
 export interface IJwtPayload {
   userId: string;
   role: UserRole;
@@ -61,7 +52,7 @@ export interface IJwtPayload {
   exp?: number; // "expires at" timestamp (auto-added by jwt.sign)
 }
 
-// Standard happy-path success response shape used by the auth service.
+// @interface IAuthResponse — standard success envelope from the auth service
 export interface IAuthResponse {
   status: string;
   data: {

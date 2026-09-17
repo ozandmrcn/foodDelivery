@@ -1,16 +1,12 @@
-// ============================================================================
-// 📌 RESTAURANT SERVICE — SHARED TYPE DEFINITIONS (types/index.ts)
-// ============================================================================
-// Restaurant + MenuItem types for this service, plus the copied user/order
-// types used by the middleware/controller. See other services' type files for
-// the "why is this duplicated" note (no shared package in this project).
-//
-// RESTAURANT-SPECIFIC LESSON:
-// ---------------------------
-// IRestaurant.ownerId is a VALUE reference (a String) to a user in the AUTH
-// service's database — not a mongoose ObjectId ref, because it cannot be
-// populated across service boundaries.
-// ============================================================================
+/* @file types/index.ts — Shared type definitions for the Restaurant service.
+ * Restaurant + MenuItem types, plus the copied user/order types used by the
+ * middleware/controller. See the other services' type files for the duplication
+ * note (no shared package in this project).
+ *
+ * Restaurant-specific lesson: IRestaurant.ownerId is a VALUE reference (String)
+ * to a user in the AUTH service's database — not a mongoose ObjectId ref,
+ * because it cannot be populated across service boundaries.
+ */
 
 import { Document, Types } from "mongoose";
 
@@ -52,9 +48,9 @@ export interface IJwtPayload {
   exp?: number;
 }
 
-// Restaurant Types
-// -----------------
-// Opening hours: a simple weekday->string map.
+// * Restaurant Types
+
+// @interface IOpeningHours — a simple weekday->string map (embedded subdoc)
 export interface IOpeningHours {
   monday: string;
   tuesday: string;
@@ -65,8 +61,9 @@ export interface IOpeningHours {
   sunday: string;
 }
 
-// The Restaurant document. ownerId is a value-ref to an auth user (no cross-
-// service populate possible). categories/ingredients are plain string arrays.
+// @interface IRestaurant — the restaurant document.
+// @note ownerId is a VALUE reference to an auth user (no cross-service populate
+//   possible). categories/ingredients are plain string arrays.
 export interface IRestaurant extends Document {
   name: string;
   description: string;
@@ -86,8 +83,9 @@ export interface IRestaurant extends Document {
   updatedAt: Date;
 }
 
-// One dish on a restaurant's menu. restaurantId is an ObjectId ref (populate
-// works WITHIN this service's own database only).
+// @interface IMenuItem — one dish on a restaurant's menu.
+// @note restaurantId is an ObjectId ref — populate() works within THIS service's
+//   own database only.
 export interface IMenuItem extends Document {
   restaurantId: Types.ObjectId;
   name: string;

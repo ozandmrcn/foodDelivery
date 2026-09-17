@@ -1,17 +1,15 @@
-// ============================================================================
-// 📌 RESTAURANT SERVICE — ROUTE DEFINITIONS (restaurant.routes.ts)
-// ============================================================================
-// Access matrix:
-//   GET  /            -> any logged-in user (browse restaurants)
-//   POST /            -> admin + restaurant_owner (open a new restaurant)
-//   GET  /:id         -> any logged-in user (restaurant detail)
-//   GET  /:id/menu    -> any logged-in user (browse the menu)
-//   POST /:id/menu    -> admin + restaurant_owner (add a menu item)
-//
-// NOTE: ALL routes require authentication here (even browsing). This is a
-// design choice for the learning project — in a real app you'd usually allow
-// anonymous browsing of restaurants/menus and protect only the WRITE routes.
-// ============================================================================
+/* @file restaurant.routes.ts — Route table of the Restaurant service.
+ * Access matrix:
+ *   GET  /          -> any logged-in user (browse restaurants)
+ *   POST /          -> admin + restaurant_owner (open a new restaurant)
+ *   GET  /:id       -> any logged-in user (restaurant detail)
+ *   GET  /:id/menu  -> any logged-in user (browse the menu)
+ *   POST /:id/menu  -> admin + restaurant_owner (add a menu item)
+ *
+ * @note ALL routes require authentication — even browsing. That is a deliberate
+ *   design choice here; a real app would usually keep reads public and protect
+ *   only the WRITE routes.
+ */
 
 import express from "express";
 import restaurantController from "./restaurant.controller.ts";

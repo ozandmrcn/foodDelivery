@@ -1,32 +1,18 @@
-// ============================================================================
-// 📌 CATCH-ASYNC UTILITY (utils/index.ts)
-// ============================================================================
-// WHAT IS catchAsync?
-// -------------------
-// A reusable wrapper that catches rejected Promises (errors) from any async
-// route handler and forwards them to Express's error-handling middleware
-// (the `(err, req, res, next)` function in app.ts).
-//
-// WHY is this needed?
-// -------------------
-// Express does NOT automatically catch errors thrown inside async functions.
-// If an async route handler throws, the error is "unhandled" and crashes the
-// process. `catchAsync` solves this by calling `.catch(next)` on the Promise.
-//
-// Usage:
-//   router.get("/users", catchAsync(async (req, res) => {
-//     const users = await User.find(); // if this throws, catchAsync handles it
-//     res.json(users);
-//   }));
-//
-// Note: Express 5 (currently installed in this project) does handle async
-// rejections automatically, so this wrapper is technically redundant now,
-// but it is still common in codebases written for Express 4.
-// ============================================================================
+/* @file utils/index.ts — catchAsync wrapper.
+ * Forwards rejected Promises from async route handlers to Express's central
+ * error handler instead of crashing the process.
+ */
 
 import type { NextFunction, Request, Response, RequestHandler } from "express";
 import type { RouteParams } from "../types/index.ts";
 
+/**
+ * Wrap an async Express handler so rejected promises reach the error handler.
+ * @param fn - An async (req, res, next) => Promise<any> handler
+ * @returns A standard RequestHandler that calls .catch(next) on the promise
+ * @note Express 5 already catches async rejections, but this wrapper keeps
+ *   handlers uniform and remains the norm in Express 4 codebases.
+ */
 const catchAsync = (fn: RouteParams): RequestHandler => {
   return (req, res, next) => {
     fn(req, res, next).catch(next);

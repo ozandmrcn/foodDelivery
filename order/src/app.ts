@@ -1,24 +1,7 @@
-// ============================================================================
-// 📌 ORDER SERVICE — APPLICATION ENTRY POINT (app.ts)
-// ============================================================================
-// ROLü IN THE ARCHITECTURE:
-// -------------------------
-// Same bootstrap template as the auth service (each microservice is a FULL
-// independent Express app with its own port + its own database). This service
-// is the ORDER SERVICE (port 3003) — it handles order creation/tracking and is
-// the RABBITMQ PRODUCER side of the system.
-//
-// IMPORTANT FOR RECALL:
-// ---------------------
-// The bootstrap pattern is identical in every service. The DIFFERENCE between
-// services comes from:
-//   - Which routes are mounted (order.routes.ts)
-//   - Which DATABASE it connects to (process.env.MONGODB_URI -> food_delivery_order)
-//   - What business logic/services it wires up (order.service.ts + rabbitmq)
-// So when you re-read this file, only glance at the custom parts below:
-//   order middleware chain is the same security trio (helmet, morgan, ratelimit)
-//   and the unique part is the `import orderRoutes`.
-// ============================================================================
+/* @file app.ts — Order Service bootstrap entry point (port 3003).
+ * Same bootstrap template as every service: own DB -> middleware -> routes ->
+ * error handlers -> listen. This service is the RabbitMQ PRODUCER side.
+ */
 
 import express, { type NextFunction, type Request, type Response } from "express";
 import dotenv from "dotenv";
@@ -30,13 +13,15 @@ import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import orderRoutes from "./order.routes.ts";
 
-// Load environment variables
+// @env Loads PORT, MONGODB_URI, JWT_*, RABBITMQ_URL, RATE_LIMIT_* from .env
 dotenv.config();
 
-// Create an express application
+// @singleton One Express app per service
 const app = express();
 
-// Connect to MongoDB
+// * Database Connection
+// ---------------------
+// @env MONGODB_URI — order uses food_delivery_order (database-per-service).
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
@@ -46,50 +31,49 @@ mongoose
     console.error(`❌ Error connecting to MongoDB(${process.env.MONGODB_URI}):`, error);
   });
 
-// Rate Limiting
-// -----------------
-// Protects endpoints (e.g. order creation) from abuse/DoS — max N requests
-// per window per IP, values from .env (strings -> parseInt).
+// * Rate Limiting
+// ---------------
+// ! Security: caps requests per IP per windowMs to fight abuse/DoS on order
+//   creation. Env values arrive as strings -> parseInt().
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW),
   max: parseInt(process.env.RATE_LIMIT_MAX_REQ),
   message: "Too many requests from this IP, please try again later.",
 });
 
-// Middleware — each .use() runs on EVERY incoming request, in registration order:
-//   1. express.json()   parse JSON body -> req.body
-//   2. cookieParser()   parse cookies -> req.cookies
-//   3. cors()           allow cross-origin browser calls
-//   4. helmet()         security HTTP headers
-//   5. morgan("dev")    request logging
-//   6. limiter          rate limiting
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors());
-app.use(helmet());
-app.use(morgan("dev"));
-app.use(limiter);
+// * Global Middleware Chain
+// -------------------------
+// @note Registration order = execution order for EVERY request.
+app.use(express.json()); // parse JSON body -> req.body
+app.use(cookieParser()); // parse cookies -> req.cookies
+app.use(cors()); // allow cross-origin browser calls
+app.use(helmet()); // security HTTP headers
+app.use(morgan("dev")); // request logging
+app.use(limiter); // rate limiting
 
-// Routes
+// * Routes
+// --------
 app.use("/", orderRoutes);
 
-// Error Handling
-// -----------------
-// 4-parameter signature = Express error handler. Any error routed via
-// next(err) (e.g. from a rejected promise in catchAsync) lands here, so the
-// process never crashes with an ugly stack trace to the client.
+// * Error Handling
+// ----------------
+// @note Four-parameter signature = error handler in Express; next(err) from
+//   routes (via catchAsync) lands here as clean JSON, never a stack-trace crash.
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   const message = err?.message || "Something went wrong!";
   console.log(message);
   res.status(500).json({ status: "fail", message });
 });
 
-// Global 404 Handler — registered after all routes: unmatched URLs get JSON 404.
+// * Global 404 Handler
+// --------------------
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-// Start the server on its own port (3003).
+// * Start Server
+// --------------
+// @env PORT — local dev: 3003
 app.listen(process.env.PORT, () => {
   console.log(`⭐ Order service is running on port ${process.env.PORT}`);
 });

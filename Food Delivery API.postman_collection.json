@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "8c78100d-3fa9-410e-b0bf-8cadc1824628",
     "name": "Food Delivery API",
-    "description": "# ­şıö Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## ­şÆí Microservices Architecture & Endpoints Overview:\n\n| Service | Base Route | Key Features |\n|---|---|---|\n| **Auth Service** | `/api/auth` | Register, Login, Profile, Refresh Token, Add Address, Logout |\n| **Restaurant Service** | `/api/restaurants` | Create Restaurant, Add Menu Item, List Restaurants, Restaurant Details, Restaurant Menu |\n| **Order Service** | `/api/order` | Place Order, Order Details, User Order History, Update Order Status |\n| **Delivery Service** | `/api/delivery` | Courier Register/Login, Update Courier Status, Courier Performance, Available Orders, Accept Delivery, Update Delivery Status, Track Delivery |\n\n---\n\n## ­şöæ Dynamic Environment Variables:\n- `baseUrl`: `http://localhost:3000` (Gateway URL)\n- `token`: Bearer access token for users/admins\n- `refreshToken`: User refresh token\n- `userId`: Authenticated user ID\n- `courierToken`: Bearer access token for couriers\n- `courierId`: Authenticated courier ID\n- `restaurantId`: Created/selected restaurant ID\n- `menuItemId`: Created/selected menu item ID\n- `orderId`: Placed/selected order ID",
+    "description": "# Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## Microservices Architecture & Endpoints Overview\n\n| Service | Base Route | Key Features |\n|---|---|---|\n| **Auth Service** | `/api/auth` | Register, Login, Profile, Refresh Token, Add Address, Logout |\n| **Restaurant Service** | `/api/restaurants` | Create Restaurant, Add Menu Item, List Restaurants, Restaurant Details, Restaurant Menu |\n| **Order Service** | `/api/order` | Place Order, Order Details, User Order History, Update Order Status |\n| **Delivery Service** | `/api/delivery` | Courier Register/Login, Update Courier Status, Courier Performance, Available Orders, Accept Delivery, Update Delivery Status, Track Delivery |\n\n---\n\n## Dynamic Environment Variables\n- `baseUrl`: `http://localhost:3000` (Gateway URL)\n- `token`: Bearer access token for users/admins\n- `refreshToken`: User refresh token\n- `userId`: Authenticated user ID\n- `courierToken`: Bearer access token for couriers\n- `courierId`: Authenticated courier ID\n- `restaurantId`: Created/selected restaurant ID\n- `menuItemId`: Created/selected menu item ID\n- `orderId`: Placed/selected order ID",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "57587615"
   },
@@ -18,7 +18,7 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "// Always generate fresh email for Register to avoid duplicate key errors",
+                  "// Generate a fresh email per run to avoid duplicate-key errors.",
                   "pm.collectionVariables.set('userEmail', 'user_' + Date.now() + '@delivery.com');"
                 ],
                 "type": "text/javascript"
@@ -34,12 +34,22 @@
                   "",
                   "if (pm.response.code === 201 || pm.response.code === 200) {",
                   "    var res = pm.response.json();",
-                  "    if (res.result && res.result.data) {",
-                  "        if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
-                  "        if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
-                  "        if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
-                  "        console.log('Ô£à Registered User ID:', res.result.data.user.id);",
-                  "    }",
+                  "    pm.test('Response returns user data + tokens', function () {",
+                  "        pm.expect(res.result).to.be.an('object');",
+                  "        pm.expect(res.result.data).to.be.an('object');",
+                  "        pm.expect(res.result.data.accessToken).to.be.a('string');",
+                  "        pm.expect(res.result.data.refreshToken).to.be.a('string');",
+                  "        pm.expect(res.result.data.user).to.have.property('id');",
+                  "    });",
+                  "",
+                  "    if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "    if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
+                  "    if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
+                  "} else {",
+                  "    pm.test('Error response is shaped correctly', function () {",
+                  "        var err = pm.response.json();",
+                  "        pm.expect(err).to.have.property('message');",
+                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -74,7 +84,7 @@
                 "register"
               ]
             },
-            "description": "### ­şæñ Register User\nRegisters a new user (admin/customer/restaurant_owner)."
+            "description": "### Register User\nRegisters a new user (admin/customer/restaurant_owner). Saves `token`, `refreshToken` and `userId`."
           },
           "response": []
         },
@@ -91,12 +101,20 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    var res = pm.response.json();",
-                  "    if (res.result && res.result.data) {",
-                  "        if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
-                  "        if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
-                  "        if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
-                  "        console.log('­şöæ User Logged in successfully');",
-                  "    }",
+                  "    pm.test('Login returns user data + tokens', function () {",
+                  "        pm.expect(res.result).to.be.an('object');",
+                  "        pm.expect(res.result.data.accessToken).to.be.a('string');",
+                  "        pm.expect(res.result.data.refreshToken).to.be.a('string');",
+                  "    });",
+                  "",
+                  "    if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "    if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
+                  "    if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
+                  "} else {",
+                  "    pm.test('Error response is shaped correctly', function () {",
+                  "        var err = pm.response.json();",
+                  "        pm.expect(err).to.have.property('message');",
+                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -131,7 +149,7 @@
                 "login"
               ]
             },
-            "description": "### ­şöæ User Login\nLogs in with credentials and saves `token` and `userId`."
+            "description": "### User Login\nLogs in with credentials and saves `token`, `refreshToken` and `userId`."
           },
           "response": []
         },
@@ -146,9 +164,18 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Profile returns user object', function () {",
+                  "pm.test('Profile returns the full user object', function () {",
                   "    var res = pm.response.json();",
                   "    pm.expect(res.user).to.be.an('object');",
+                  "    pm.expect(res.user).to.have.property('email');",
+                  "    pm.expect(res.user).to.not.have.property('password');",
+                  "});",
+                  "",
+                  "pm.test('Authenticated userId matches saved variable', function () {",
+                  "    var res = pm.response.json();",
+                  "    if (pm.collectionVariables.get('userId')) {",
+                  "        pm.expect(res.user.id).to.eql(pm.collectionVariables.get('userId'));",
+                  "    }",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -179,7 +206,7 @@
                 "profile"
               ]
             },
-            "description": "### ­şæñ Get Profile\nFetches authenticated user profile."
+            "description": "### Get Profile\nFetches the authenticated user profile. Requires a valid `token`."
           },
           "response": []
         },
@@ -196,9 +223,18 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    var res = pm.response.json();",
+                  "    pm.test('Returns a fresh access token', function () {",
+                  "        pm.expect(res.result).to.be.an('object');",
+                  "        pm.expect(res.result.accessToken).to.be.a('string');",
+                  "    });",
+                  "",
                   "    if (res.result && res.result.accessToken) {",
                   "        pm.collectionVariables.set('token', res.result.accessToken);",
                   "    }",
+                  "} else {",
+                  "    pm.test('401 when refresh token is missing or expired', function () {",
+                  "        pm.expect(pm.response.code).to.eql(401);",
+                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -224,7 +260,7 @@
                 "refresh"
               ]
             },
-            "description": "### ­şöä Refresh Token\nObtains a new access token via refresh token cookie."
+            "description": "### Refresh Token\nObtains a new access token via the `refreshToken` cookie."
           },
           "response": []
         },
@@ -237,6 +273,13 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Address is appended to the addresses array', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.result).to.be.an('object');",
+                  "    pm.expect(res.result.data.addresses).to.be.an('array');",
+                  "    pm.expect(res.result.data.addresses.length).to.be.above(0);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -281,7 +324,7 @@
                 "add-address"
               ]
             },
-            "description": "### ­şôı Add Address\nAdds a delivery address to the current user profile."
+            "description": "### Add Address\nAdds a delivery address to the current user profile. Requires `token`."
           },
           "response": []
         },
@@ -294,6 +337,11 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Session is cleared', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('success');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -314,7 +362,7 @@
                 "logout"
               ]
             },
-            "description": "### ­şÜ¬ Logout\nClears user session."
+            "description": "### Logout\nClears the user session (clears both token cookies)."
           },
           "response": []
         }
@@ -337,11 +385,20 @@
                   "",
                   "if (pm.response.code === 200 || pm.response.code === 201) {",
                   "    var res = pm.response.json();",
+                  "    pm.test('Restaurant document is returned', function () {",
+                  "        pm.expect(res).to.be.an('object');",
+                  "        pm.expect(res).to.have.property('name');",
+                  "        pm.expect(res).to.have.property('openingHours');",
+                  "    });",
+                  "",
                   "    var restId = res.id || res._id;",
                   "    if (restId) {",
                   "        pm.collectionVariables.set('restaurantId', restId);",
-                  "        console.log('­şÅ¬ Restaurant ID saved:', restId);",
                   "    }",
+                  "} else {",
+                  "    pm.test('403 when the caller lacks the required role', function () {",
+                  "        pm.expect(pm.response.code).to.eql(403);",
+                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -385,7 +442,7 @@
                 "restaurants"
               ]
             },
-            "description": "### ­şÅ¬ Create Restaurant\nCreates a restaurant and saves `restaurantId`."
+            "description": "### Create Restaurant\nCreates a restaurant (admin or restaurant_owner) and saves `restaurantId`."
           },
           "response": []
         },
@@ -402,10 +459,15 @@
                   "",
                   "if (pm.response.code === 200 || pm.response.code === 201) {",
                   "    var res = pm.response.json();",
+                  "    pm.test('Menu item document is returned', function () {",
+                  "        pm.expect(res).to.be.an('object');",
+                  "        pm.expect(res).to.have.property('name');",
+                  "        pm.expect(res).to.have.property('price');",
+                  "    });",
+                  "",
                   "    var mId = res.id || res._id;",
                   "    if (mId) {",
                   "        pm.collectionVariables.set('menuItemId', mId);",
-                  "        console.log('­şıö Menu Item ID saved:', mId);",
                   "    }",
                   "}"
                 ],
@@ -458,7 +520,7 @@
                 }
               ]
             },
-            "description": "### ­şıö Add Menu Item\nAdds a menu item to the restaurant."
+            "description": "### Add Menu Item\nAdds a menu item to `{{restaurantId}}` and saves `menuItemId`."
           },
           "response": []
         },
@@ -473,9 +535,20 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Response has items array', function () {",
+                  "pm.test('Response has items array + pagination metadata', function () {",
                   "    var res = pm.response.json();",
                   "    pm.expect(res).to.have.property('items').that.is.an('array');",
+                  "    pm.expect(res).to.have.property('total').that.is.a('number');",
+                  "    pm.expect(res).to.have.property('page');",
+                  "    pm.expect(res).to.have.property('limit');",
+                  "});",
+                  "",
+                  "pm.test('Each restaurant has an id and name', function () {",
+                  "    var res = pm.response.json();",
+                  "    if (res.items.length > 0) {",
+                  "        pm.expect(res.items[0]).to.have.property('id');",
+                  "        pm.expect(res.items[0]).to.have.property('name');",
+                  "    }",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -535,7 +608,7 @@
                 }
               ]
             },
-            "description": "### ­şôï List Restaurants\nQueries restaurants with pagination and filters."
+            "description": "### List Restaurants\nQueries restaurants with pagination and optional filters (category, rating, deliveryTime, minOrder)."
           },
           "response": []
         },
@@ -548,6 +621,13 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns the requested restaurant', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res).to.be.an('object');",
+                  "    pm.expect(res).to.have.property('name');",
+                  "    pm.expect(res.id).to.eql(pm.collectionVariables.get('restaurantId'));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -584,7 +664,7 @@
                 }
               ]
             },
-            "description": "### Ôä╣´©Å Get Restaurant Details\nFetches restaurant by ID."
+            "description": "### Get Restaurant Details\nFetches the full restaurant document by its ID."
           },
           "response": []
         },
@@ -602,6 +682,10 @@
                   "pm.test('Response is an array of menu items', function () {",
                   "    var res = pm.response.json();",
                   "    pm.expect(res).to.be.an('array');",
+                  "    if (res.length > 0) {",
+                  "        pm.expect(res[0]).to.have.property('name');",
+                  "        pm.expect(res[0]).to.have.property('price');",
+                  "    }",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -639,7 +723,7 @@
                 }
               ]
             },
-            "description": "### ­şıò Get Restaurant Menu\nLists all food items offered by the restaurant."
+            "description": "### Get Restaurant Menu\nLists all food items offered by `{{restaurantId}}`."
           },
           "response": []
         }
@@ -662,11 +746,22 @@
                   "",
                   "if (pm.response.code === 200 || pm.response.code === 201) {",
                   "    var res = pm.response.json();",
+                  "    pm.test('Order starts in pending state with computed total', function () {",
+                  "        pm.expect(res).to.be.an('object');",
+                  "        pm.expect(res).to.have.property('items').that.is.an('array');",
+                  "        pm.expect(res).to.have.property('totalAmount').that.is.a('number');",
+                  "        pm.expect(res.status).to.eql('pending');",
+                  "    });",
+                  "",
                   "    var oId = res.id || res._id;",
                   "    if (oId) {",
                   "        pm.collectionVariables.set('orderId', oId);",
-                  "        console.log('­şôĞ Order ID saved:', oId);",
                   "    }",
+                  "} else {",
+                  "    pm.test('Error response is shaped correctly', function () {",
+                  "        var err = pm.response.json();",
+                  "        pm.expect(err).to.have.property('message');",
+                  "    });",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -710,7 +805,7 @@
                 "order"
               ]
             },
-            "description": "### ­şøÆ Place Order\nCreates order using current `restaurantId` and `menuItemId`."
+            "description": "### Place Order\nCreates an order using `{{restaurantId}}` and `{{menuItemId}}`. Saves `orderId`. The total is computed server-side."
           },
           "response": []
         },
@@ -725,9 +820,12 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Order details returned', function () {",
+                  "pm.test('Order details are returned', function () {",
                   "    var res = pm.response.json();",
+                  "    pm.expect(res).to.be.an('object');",
                   "    pm.expect(res.items).to.be.an('array');",
+                  "    pm.expect(res.id).to.eql(pm.collectionVariables.get('orderId'));",
+                  "    pm.expect(res).to.have.property('status');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -764,7 +862,7 @@
                 }
               ]
             },
-            "description": "### ­şöı Get Order Details\nFetches order details by `orderId`."
+            "description": "### Get Order Details\nFetches a single order by `orderId`."
           },
           "response": []
         },
@@ -819,7 +917,7 @@
                 }
               ]
             },
-            "description": "### ­şô£ Get User Orders\nFetches all orders belonging to `userId`."
+            "description": "### Get User Orders\nFetches all orders belonging to `userId`."
           },
           "response": []
         },
@@ -836,6 +934,7 @@
                   "",
                   "pm.test('Order status updated successfully', function () {",
                   "    var res = pm.response.json();",
+                  "    pm.expect(res.order).to.be.an('object');",
                   "    pm.expect(res.order.status).to.eql('preparing');",
                   "});"
                 ],
@@ -888,7 +987,7 @@
                 }
               ]
             },
-            "description": "### ÔÜí Update Order Status\nChanges order status to `preparing`."
+            "description": "### Update Order Status\nAdvances the order lifecycle (admin or restaurant_owner only). Sending `ready` also publishes the RabbitMQ `order.ready` event."
           },
           "response": []
         }
@@ -905,7 +1004,7 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "// Always generate fresh email for Courier Register to avoid duplicate key errors",
+                  "// Generate a fresh email per run to avoid duplicate-key errors.",
                   "pm.collectionVariables.set('courierEmail', 'courier_' + Date.now() + '@delivery.com');"
                 ],
                 "type": "text/javascript"
@@ -921,12 +1020,16 @@
                   "",
                   "if (pm.response.code === 201) {",
                   "    var res = pm.response.json();",
-                  "    if (res.data) {",
-                  "        if (res.data.token) pm.collectionVariables.set('courierToken', res.data.token);",
-                  "        if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
-                  "            pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
-                  "        }",
-                  "        console.log('­şÜ┤ Courier Registered & Token Saved');",
+                  "    pm.test('Registration returns courier + token', function () {",
+                  "        pm.expect(res.data).to.be.an('object');",
+                  "        pm.expect(res.data.token).to.be.a('string');",
+                  "        pm.expect(res.data.courier).to.be.an('object');",
+                  "        pm.expect(res.data.courier.role).to.eql('courier');",
+                  "    });",
+                  "",
+                  "    if (res.data.token) pm.collectionVariables.set('courierToken', res.data.token);",
+                  "    if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
+                  "        pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
                   "    }",
                   "}"
                 ],
@@ -963,7 +1066,7 @@
                 "register"
               ]
             },
-            "description": "### ­şÜ┤ Courier Registration\nRegisters a new courier with vehicle details and sets `courierToken` and `courierId`."
+            "description": "### Courier Registration\nRegisters a new courier with vehicle details. Saves `courierToken` and `courierId`."
           },
           "response": []
         },
@@ -980,12 +1083,14 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    var res = pm.response.json();",
-                  "    if (res.data && res.data.token) {",
-                  "        pm.collectionVariables.set('courierToken', res.data.token);",
-                  "        if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
-                  "            pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
-                  "        }",
-                  "        console.log('­şÜ┤ Courier Logged in successfully');",
+                  "    pm.test('Login returns courier + token', function () {",
+                  "        pm.expect(res.data).to.be.an('object');",
+                  "        pm.expect(res.data.token).to.be.a('string');",
+                  "    });",
+                  "",
+                  "    if (res.data.token) pm.collectionVariables.set('courierToken', res.data.token);",
+                  "    if (res.data.courier && (res.data.courier._id || res.data.courier.id)) {",
+                  "        pm.collectionVariables.set('courierId', res.data.courier._id || res.data.courier.id);",
                   "    }",
                   "}"
                 ],
@@ -1022,7 +1127,7 @@
                 "login"
               ]
             },
-            "description": "### ­şÜ┤ Courier Login\nLogs in courier and saves `courierToken`."
+            "description": "### Courier Login\nLogs in a courier and saves `courierToken` and `courierId`."
           },
           "response": []
         },
@@ -1035,6 +1140,12 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Courier availability is updated', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.data.courier.status).to.eql('available');",
+                  "    pm.expect(res.data.courier).to.have.property('location');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1080,7 +1191,7 @@
                 "status"
               ]
             },
-            "description": "### ­şôı Update Courier Status\nUpdates courier availability status (`available`, `busy`, `offline`) and current GPS coordinates."
+            "description": "### Update Courier Status\nSets the courier's availability (`available`, `busy`, `offline`) and appends a GPS point."
           },
           "response": []
         },
@@ -1093,6 +1204,14 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Performance metrics are returned', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an('object');",
+                  "    pm.expect(res.data.totalDeliveries).to.be.a('number');",
+                  "    pm.expect(res.data.completedDeliveries).to.be.a('number');",
+                  "    pm.expect(res.data.completionRate).to.be.a('number');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1137,7 +1256,7 @@
                 }
               ]
             },
-            "description": "### ­şôè Get Courier Performance\nAdmin endpoint to query performance stats of a courier."
+            "description": "### Get Courier Performance\nAdmin endpoint: aggregated delivery stats for a courier."
           },
           "response": []
         },
@@ -1150,6 +1269,12 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns the deliveries list', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an('object');",
+                  "    pm.expect(res.data.deliveries).to.be.an('array');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1180,7 +1305,7 @@
                 "orders"
               ]
             },
-            "description": "### ­şôĞ Get Available Delivery Orders\nCourier endpoint to list ready orders waiting for delivery pickup."
+            "description": "### Get Available Delivery Orders\nCourier endpoint: lists deliveries waiting for courier pickup."
           },
           "response": []
         },
@@ -1193,6 +1318,14 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Delivery is assigned to the courier', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an('object');",
+                  "    if (res.data.delivery) {",
+                  "        pm.expect(res.data.delivery.status).to.eql('assigned');",
+                  "    }",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1231,7 +1364,7 @@
                 }
               ]
             },
-            "description": "### ­şøÁ Accept Delivery Order\nCourier accepts the assigned order."
+            "description": "### Accept Delivery Order\nCourier claims an order. The atomic guard prevents double assignment."
           },
           "response": []
         },
@@ -1244,6 +1377,14 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Delivery progress is updated', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an('object');",
+                  "    if (res.data.delivery) {",
+                  "        pm.expect(res.data.delivery.status).to.eql('in_transit');",
+                  "    }",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1296,7 +1437,7 @@
                 }
               ]
             },
-            "description": "### ­şÜÜ Update Delivery Status\nUpdates delivery progress (`assigned`, `picked_up`, `in_transit`, `delivered`, `failed`)."
+            "description": "### Update Delivery Status\nAdvances the delivery lifecycle (`assigned`, `picked_up`, `in_transit`, `delivered`, `failed`)."
           },
           "response": []
         },
@@ -1309,6 +1450,13 @@
                 "exec": [
                   "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Tracking payload is returned', function () {",
+                  "    var res = pm.response.json();",
+                  "    pm.expect(res.data).to.be.an('object');",
+                  "    pm.expect(res.data).to.have.property('status');",
+                  "    pm.expect(res.data).to.have.property('orderId');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1347,7 +1495,7 @@
                 }
               ]
             },
-            "description": "### ­şôı Live Order Tracking\nFetches courier live location, arrival estimates and delivery status."
+            "description": "### Live Order Tracking\nFetches the live delivery status and courier info for an order."
           },
           "response": []
         }

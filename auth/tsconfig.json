@@ -1,35 +1,18 @@
-// ============================================================================
-// 📌 AUTH SERVICE — TYPESCRIPT CONFIGURATION (tsconfig.json)
-// ============================================================================
-// Every (sub)service has its OWN tsconfig.json — each service compiles and
-// runs as an INDEPENDENT TypeScript project (microservice independence again).
-// This file is JSONC (JSON with Comments): TypeScript officially allows
-// comments here — the same is NOT true for package.json/nodemon.json.
-//
-// IMPORTANT FLAGS DECODED (the ones you'll meet again):
-// -----------------------------------------------------
-// module / moduleResolution: "nodenext"  -> Node's native ESM rules.
-//   The project runs with `"type": "module"` and imports use .ts extensions.
-// target: "esnext" -> transpile to the latest ECMAScript.
-// allowImportingTsExtensions: true -> import "./auth.routes.ts" (WITH .ts)
-//   allowed. Only valid because `rewriteRelativeImportExtensions` rewrites it
-//   to .js in the build output (Node ESM needs a real extension at runtime).
-// verbatimModuleSyntax: true -> `import type` MUST be used for types, so type
-//   imports are erased correctly and never executed at runtime.
-// isolatedModules: true -> every file compiles alone (safe for tsx/nodemon
-//   which do not do full-program type analysis at runtime).
-// moduleDetection: "force" -> every file is treated as a module (the `export {}`
-//   in .d.ts files pairs nicely with this).
-// noUncheckedIndexedAccess: true -> arr[i] has type T | undefined -> forces
-//   null-checks on array access (stricter = safer).
-// exactOptionalPropertyTypes: true -> `foo?: string` cannot be assigned
-//   `undefined` explicitly; it means "property may be absent".
-// strict: true -> the master switch that enables all strict checks.
-// skipLibCheck: true -> skip type-checking of .d.ts files in node_modules
-//   (much faster builds; keeps mongoose/bcrypt type quirks from breaking us).
-// sourceMap/declaration/declarationMap: true -> debug + `.d.ts` output (useful
-//   when another service later shares types via a package).
-// ============================================================================
+/* @file tsconfig.json — TypeScript configuration for the Auth service.
+ * JSONC: comments are allowed here (NOT in package.json/nodemon.json).
+ *
+ * Every service compiles as an INDEPENDENT TS project (microservice rule again).
+ *
+ * Key flags:
+ * - module/moduleResolution: nodenext -> native Node ESM.
+ * - allowImportingTsExtensions + rewriteRelativeImportExtensions: imports keep
+ *   ".ts" in the source and are rewritten to ".js" in the build output.
+ * - verbatimModuleSyntax: forces `import type` for types (erased at build).
+ * - isolatedModules / moduleDetection force: safe per-file building.
+ * - strict + noUncheckedIndexedAccess + exactOptionalPropertyTypes: early bugs.
+ * - skipLibCheck: faster builds, ignores node_modules .d.ts quirks.
+ * - sourceMap/declaration/declarationMap: debugging + .d.ts output.
+ */
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {

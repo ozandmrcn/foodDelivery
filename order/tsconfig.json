@@ -1,22 +1,15 @@
-// ============================================================================
-// 📌 ORDER SERVICE — TYPESCRIPT CONFIGURATION (tsconfig.json)
-// ============================================================================
-// IDENTICAL setup to the other services (each service = its own TS project).
-// This file is JSONC (JSON with Comments) — TypeScript allows comments here.
-//
-// WHAT THIS CONFIG IS OPTIMIZED FOR:
-// ----------------------------------
-// 1. Running with `tsx`/`nodemon` in dev (no full type-check at runtime,
-//    hence isolatedModules + verbatimModuleSyntax keep it safe).
-// 2. Building with `tsc` for production (`npm run build` -> dist/app.js), with
-//    Node ESM. `rewriteRelativeImportExtensions` is the glue: sources import
-//    "./rabbitmq.service.ts" (allowed by allowImportingTsExtensions) and tsc
-//    rewrites those to ".js" in the output so Node's ESM loader accepts them.
-// 3. Strictness: strict + noUncheckedIndexedAccess + exactOptionalPropertyTypes
-//    catch bugs early (great for learning habits).
-//
-// See auth/tsconfig.json for the per-flag explanation (identical flags).
-// ============================================================================
+/* @file tsconfig.json — TypeScript configuration for the Order service.
+ * IDENTICAL setup to the other services (each service = its own TS project).
+ *
+ * Optimized for:
+ * 1. Dev: tsx/nodemon runtime -> isolatedModules + verbatimModuleSyntax keep
+ *    per-file transpilation safe.
+ * 2. Prod build (`npm run build` -> dist/app.js): imports use ".ts" in source,
+ *    rewriteRelativeImportExtensions turns them into ".js" for Node ESM.
+ * 3. Strictness: strict + noUncheckedIndexedAccess + exactOptionalPropertyTypes.
+ *
+ * @see auth/tsconfig.json for the per-flag explanation (identical flags).
+ */
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {

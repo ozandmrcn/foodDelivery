@@ -1,12 +1,9 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — AUTH MIDDLEWARE (delivery.middleware.ts)
-// ============================================================================
-// IDENTICAL to the order service's middleware: verifies the JWT and attaches
-// only the decoded payload { userId, role } to req.user — no DB call.
-// `authorize` is the RBAC role guard. This file is copy-pasted because the
-// delivery service runs as an independent deployable unit (no shared package).
-// See order.middleware.ts for a full explanation of the pattern.
-// ============================================================================
+/* @file delivery.middleware.ts — JWT auth + RBAC middleware.
+ * IDENTICAL to the order service's middleware: verifies the JWT and attaches
+ * only the decoded payload { userId, role } — no DB call. Duplicated per
+ * service on purpose: each service is an independent deployable unit.
+ * @see order.middleware.ts for the full pattern explanation.
+ */
 
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
@@ -14,11 +11,10 @@ import type { IJwtPayload } from "./types/index.ts";
 
 const { JsonWebTokenError, TokenExpiredError } = jwt;
 
-// JWT Token Authorization
+// @middleware authenticate — fills req.user with the decoded JWT payload
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Token from httpOnly cookie or the `Bearer xxxx` header (`substring(7)`
-    // strips the leading "Bearer ").
+    // Token from the httpOnly cookie or `Bearer xxxx` header (substring(7) strips "Bearer ").
     const accessToken = req.cookies.accessToken || req.headers.authorization?.substring(7);
     if (!accessToken) {
       res.status(401).json({
@@ -27,10 +23,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       });
       return;
     }
-    // Verify signature + expiry. Throws -> handled in the catch block below.
+    // Verify signature + expiry (throws -> caught below).
     const decoded = jwt.verify(accessToken, process.env.JWT_SECRET) as IJwtPayload;
 
-    // Attach the DECODED PAYLOAD (userId + role), not the full document.
+    // @note Attach only the DECODED payload, not the full document.
     req.user = decoded;
 
     next();
@@ -57,10 +53,12 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-// Role Authorization Middleware
-// ------------------------------
-// Higher-order function: `authorize(["courier"])` RETURNS a middleware that
-// runs the role check. Reads req.user.role set by authenticate.
+// @middleware authorize — RBAC role guard
+/**
+ * Higher-order function: returns a middleware checking req.user.role.
+ * @param roles - Allowed roles, e.g. ["courier"]
+ * @returns An Express middleware enforcing the role check
+ */
 export const authorize = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {

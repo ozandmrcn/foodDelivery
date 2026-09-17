@@ -1,21 +1,13 @@
-// ============================================================================
-// 📌 ENVIRONMENT & REQUEST TYPE AUGMENTATION (environment.d.ts)
-// ============================================================================
-// Three things are declared here:
-// 1. `NodeJS.ProcessEnv`  -> adds env vars to process.env (typed access).
-// 2. `Express.Request.user` -> augments the Request type of Express so that
-//    `req.user` is recognized everywhere WITHOUT casting.
-//
-// Declaration merging: `declare global` re-opens interfaces that already exist
-// (NodeJS.ProcessEnv from @types/node, Express.Request from @types/express)
-// and adds our custom fields. The `import` at the top + `export {}` at the
-// bottom makes this file a module, which is REQUIRED for `declare global` to
-// actually affect other files. (Gotcha: without module semantics, the global
-// block silently does nothing.)
-//
-// Note: In THIS service `req.user` is the full IUser document (see middleware).
-// In order/delivery/restaurant services it is only { userId, role }.
-// ============================================================================
+/* @file environment.d.ts — Typed env vars + Express.Request augmentation.
+ * Re-opens existing interfaces via declaration merging so:
+ *   1. process.env.* reads are typed strings (no repeated null checks)
+ *   2. req.user is recognized everywhere WITHOUT casting
+ *
+ * @note `declare global` only works inside a module — hence the export {}.
+ *
+ * @note Unlike order/delivery/restaurant, HERE req.user is the FULL IUser
+ *   document (auth middleware loads it from the DB).
+ */
 
 import type { IUser } from "./index.ts";
 
@@ -39,5 +31,5 @@ declare global {
   }
 }
 
-// Marks this file as a module so `declare global` works.
+// Marks this file as a module so `declare global` applies project-wide.
 export {};

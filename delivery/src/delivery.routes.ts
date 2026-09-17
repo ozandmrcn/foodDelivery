@@ -1,19 +1,16 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — ROUTE DEFINITIONS (delivery.routes.ts)
-// ============================================================================
-// Access matrix (who can call what):
-//   POST   /couriers/register  -> public
-//   POST   /couriers/login     -> public
-//   PATCH  /couriers/status    -> courier (updates own availability)
-//   GET    /couriers/:id/performance -> admin
-//   GET    /orders                  -> courier (list unclaimed orders)
-//   POST   /orders/:id/accept       -> courier (claim an order)
-//   PATCH  /orders/:id/status       -> courier (progress updates)
-//   GET    /orders/:id/tracking     -> ANY logged-in user (customer watches)
-//
-// Middleware rule: `authenticate` FIRST (fills req.user), then `authorize`
-// checks req.user.role against the allowed list.
-// ============================================================================
+/* @file delivery.routes.ts — Route table of the Delivery service.
+ * Access matrix (who can call what):
+ *   POST  /couriers/register         -> public
+ *   POST  /couriers/login            -> public
+ *   PATCH /couriers/status           -> courier (own availability)
+ *   GET   /couriers/:courierId/performance -> admin
+ *   GET   /orders                    -> courier (unclaimed orders)
+ *   POST  /orders/:orderId/accept    -> courier (claim an order)
+ *   PATCH /orders/:orderId/status    -> courier (progress updates)
+ *   GET   /orders/:orderId/tracking  -> ANY logged-in user (customer watches)
+ *
+ * @note authenticate() first (fills req.user), then authorize() checks the role.
+ */
 
 import express from "express";
 import deliveryController from "./delivery.controller.ts";

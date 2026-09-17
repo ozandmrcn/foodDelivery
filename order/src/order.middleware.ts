@@ -1,20 +1,14 @@
-// ============================================================================
-// 📌 ORDER SERVICE — AUTH MIDDLEWARE (order.middleware.ts)
-// ============================================================================
-// This is the SAME middleware you saw in the auth service — with ONE key
-// difference that is worth memorizing:
-//
-//   AUTH SERVICE:   req.user = full user document (fetched from the DB)
-//   ORDER SERVICE:  req.user = only the decoded JWT payload { userId, role }
-//
-// WHY the difference? Because the order service does NOT own the users
-// collection (that is auth service's database — database-per-service rule).
-// It could still query the auth database via HTTP, but that would add a
-// blocking network call to EVERY request. So this service trusts the JWT
-// signature alone: if the signature verifies, the token was signed by a
-// service that knows JWT_SECRET, hence valid. Faster, works offline, and the
-// only real cost is that a revoked user stays "valid" until token expiry.
-// ============================================================================
+/* @file order.middleware.ts — JWT auth + RBAC middleware.
+ * Same idea as the auth service middleware with ONE key difference:
+ *   AUTH SERVICE:  req.user = full user document (DB lookup)
+ *   ORDER SERVICE: req.user = decoded JWT payload only { userId, role }
+ *
+ * @note Why no DB lookup here? The users collection belongs to the auth
+ *   service (database-per-service). Querying it over HTTP on every request
+ *   would add a blocking network call. Trusting the JWT signature alone is
+ *   faster and offline — the trade-off: a revoked user stays "valid" until
+ *   their token expires.
+ */
 
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
@@ -22,7 +16,7 @@ import type { IJwtPayload } from "./types/index.ts";
 
 const { JsonWebTokenError, TokenExpiredError } = jwt;
 
-// JWT Token Authorization
+// @middleware authenticate — verifies the token, fills req.user with the payload
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Grab the token from the httpOnly cookie or the `Bearer` header.
@@ -34,15 +28,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       });
       return;
     }
-    // Verify signature + expiry. Throws -> caught below.
+    // Verify signature + expiry (throws -> caught below).
     const decoded = jwt.verify(accessToken, process.env.JWT_SECRET) as IJwtPayload;
 
-    // NOT the full document, just the payload (see header note).
+    // Just the payload — NOT the full document (see file header note).
     req.user = decoded;
 
     next();
   } catch (error) {
-    // Differentiate expired (-> client should refresh) vs invalid (-> log in again).
+    // Distinguish "refresh it" (expired) from "log in again" (invalid).
     if (error instanceof TokenExpiredError) {
       res.status(401).json({
         status: "error",
@@ -65,13 +59,13 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-// Role Authorization Middleware
-// ------------------------------
-// `authorize(roles)` returns a NEW middleware that checks if req.user.role
-// (set by authenticate) is in the allowed list. This is RBAC — Role Based
-// Access Control, implemented in 10 lines.
-// Example of HIGHER-ORDER FUNCTION: authorize returns a function (closure)
-// that still sees `roles` through its outer scope.
+// @middleware authorize — RBAC in ~10 lines
+/**
+ * Higher-order function: returns a middleware that checks req.user.role
+ * against the allowed list (closure keeps `roles` visible to the returned fn).
+ * @param roles - Allowed roles, e.g. ["admin", "restaurant_owner"]
+ * @returns An Express middleware enforcing the role check
+ */
 export const authorize = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {

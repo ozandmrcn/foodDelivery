@@ -1,11 +1,11 @@
-// ============================================================================
-// 📌 ENVIRONMENT & REQUEST TYPE AUGMENTATION (environment.d.ts)
-// ============================================================================
-// Adds the restaurant service's env vars to NodeJS.ProcessEnv and augments
-// Express.Request so `req.user` is typed as { userId, role } (decoded JWT
-// payload only). `declare global` + module marker (`export {}`) re-opens the
-// existing interfaces — declaration merging.
-// ============================================================================
+/* @file environment.d.ts — Typed env vars + Express.Request augmentation.
+ * Re-opens existing interfaces via declaration merging so:
+ *   1. process.env.* reads are typed strings (no repeated null checks)
+ *   2. req.user is recognized everywhere WITHOUT casting
+ *
+ * @note Like order/delivery, req.user here is only the decoded JWT payload
+ *   { userId, role } — no DB lookup in this service's middleware.
+ */
 
 import type { IUser, UserRole } from "./index.ts";
 
@@ -32,5 +32,5 @@ declare global {
   }
 }
 
-// Marks this file as a module so `declare global` works.
+// Marks this file as a module so `declare global` applies project-wide.
 export {};

@@ -1,13 +1,11 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — SHARED TYPE DEFINITIONS (types/index.ts)
-// ============================================================================
-// Home for the delivery service's TypeScript types (Courier, DeliveryTracking,
-// plus copied user/order types so the rabbitmq consumer can type the payloads
-// it receives). See ordering service's types file for the duplication lesson.
-//
-// REMEMBER: the status strings below must match the DTO enums and the
-// mongoose enums in delivery.model.ts.
-// ============================================================================
+/* @file types/index.ts — Shared type definitions for the Delivery service.
+ * Courier + DeliveryTracking types, plus copied user/order types so the
+ * RabbitMQ consumer can type the payloads it receives. Same duplication lesson
+ * as the other services: no shared package exists.
+ *
+ * @note DeliveryStatus / CourierStatus strings must match the DTO and mongoose
+ *   enums in delivery.model.ts.
+ */
 
 import type { NextFunction, Request, Response } from "express";
 import type { Document, Types } from "mongoose";
@@ -48,21 +46,21 @@ export interface IJwtPayload {
   exp?: number;
 }
 
-// the delivery progress states (model + dto must match).
+// @typedef DeliveryStatus — courier progress steps (model + dto must match)
 export type DeliveryStatus = "assigned" | "picked_up" | "in_transit" | "delivered" | "failed";
 
-// A GPS point (note: "longtitude" mirrors the typo used in the models/schemas).
+// @interface ILocation — a GPS point (note: "longtitude" mirrors the model typo)
 export interface ILocation {
   latitude: number;
   longtitude: number;
 }
 
-// The DeliveryTracking document: track ONE order's courier journey.
-// orderId is a VALUE reference to the order service's document (no join).
+// @interface IDeliveryTracking — tracks ONE order's courier journey.
+// @note orderId is a VALUE reference to the order service's document (no join).
 export interface IDeliveryTracking extends Document {
   orderId: Types.ObjectId | string;
   courierId?: Types.ObjectId | string | null; // null until a courier claims the order
-  status: DeliveryStatus | "pending" | "ready"; // union: also accepts the
+  status: DeliveryStatus | "pending" | "ready"; // union also accepts the
   // pre-courier states that arrive from rabbitmq events.
   location?: ILocation;
   estimatedDeliveryTime?: Date;
@@ -73,9 +71,10 @@ export interface IDeliveryTracking extends Document {
   updatedAt: Date;
 }
 
-// Courier - a courier document.
+// @typedef CourierStatus — availability states of a courier
 export type CourierStatus = "available" | "busy" | "offline";
 
+// @interface ICourier — one delivery person document
 export interface ICourier extends Document {
   firstName: string;
   lastName: string;
@@ -92,9 +91,8 @@ export interface ICourier extends Document {
   updatedAt: Date;
 }
 
-// Delivery Types
-// Order status types (copied so the rabbitmq consumer can
-// parse the JSON messages published by the ORDER service).
+// * Order types (copied so the rabbitmq consumer can parse the JSON messages
+//   published by the ORDER service).
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "on_the_way" | "delivered" | "cancelled";
 
 export interface OrderItem {

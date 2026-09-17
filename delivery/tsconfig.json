@@ -1,17 +1,12 @@
-// ============================================================================
-// 📌 DELIVERY SERVICE — TYPESCRIPT CONFIGURATION (tsconfig.json)
-// ============================================================================
-// IDENTICAL setup to the other services (each service = its own TS project).
-// This file is JSONC (JSON with Comments) — TypeScript allows comments here.
-//
-// ONE RABBITMQ-CONSUMER REMINDER: since delivery starts listening to the bus
-// in its constructor (rabbitmq.service.ts), it is the first service that needs
-// the event payload types to match the ORDER service's publish schema. The
-// strict typing settings below constantly remind you of that contract by
-// making schema drifts a compile error.
-//
-// See auth/tsconfig.json for the per-flag explanation (identical flags).
-// ============================================================================
+/* @file tsconfig.json — TypeScript configuration for the Delivery service.
+ * IDENTICAL setup to the other services (each service = its own TS project).
+ *
+ * @broker reminder: delivery starts consuming the bus in its constructor, so it
+ * depends on the order service's publish schema — the strict typing below turns
+ * any event contract drift into a compile error.
+ *
+ * @see auth/tsconfig.json for the per-flag explanation (identical flags).
+ */
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {

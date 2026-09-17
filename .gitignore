@@ -17,6 +17,10 @@ build/
 out/
 *.tsbuildinfo
 
+# Test coverage
+coverage/
+.nyc_output/
+
 # Logs
 logs/
 *.log

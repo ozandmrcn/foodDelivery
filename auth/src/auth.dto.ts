@@ -1,54 +1,21 @@
-// ============================================================================
-// 📌 AUTH SERVICE — DTO & VALIDATION (auth.dto.ts)
-// ============================================================================
-// This file already contains a great Zod/DTO guide below the imports — keep it,
-// it explains the WHY of runtime validation. Quick recap for later:
-//   - TypeScript types disappear at runtime, Zod schemas do NOT.
-//   - DTO = the "agreed shape" of data entering/exiting the service.
-//   - validateDto<T> = one generic function that validates ANY schema.
-// ============================================================================
+/* @file auth.dto.ts — Zod schemas + inferred types (DTOs) for the Auth service.
+ * DTO = the agreed shape of data entering the service. Zod validates untrusted
+ * runtime input AND derives the TypeScript types below (z.infer).
+ */
 
 import * as z from "zod";
 
 /**
- * ============================================================================
- * 📌 ZOD & DTO (Data Transfer Object) GUIDE
- * ============================================================================
- *
- * 1. What is Zod and Why Do We Use It?
- * ------------------------------------
- * - TypeScript ONLY performs compile-time static type checking. Once transpiled
- *   to JavaScript and running in production, all TypeScript types disappear.
- * - Request payloads (req.body, req.query, req.params) are untrusted runtime data
- *   that may be incomplete, invalid, or malicious.
- * - Zod provides runtime schema validation, catches errors early, and generates
- *   clean error messages while automatically deriving TypeScript types.
- *
- * 2. What is a DTO (Data Transfer Object)?
- * ----------------------------------------
- * - An object schema defining the shape and constraints of data sent between
- *   client and server (e.g., login credentials, registration details, addresses).
- *
- * 3. Type Inference (`z.infer`):
- * ------------------------------
- * - Instead of manually creating both a TypeScript `interface` and a Zod schema
- *   (which causes code duplication and maintenance burden), `z.infer<typeof schema>`
- *   extracts the static TypeScript type directly from the Zod schema.
- *
- * 4. What is `<T>` (TypeScript Generics)?
- * ---------------------------------------
- * - `<T>` is a "Type Variable" (a placeholder/generic parameter for any data type).
- * - Why do we use `validateDto<T>`?
- *   - When you pass `registerSchema` -> `T` becomes `RegisterInput`, return type is `Promise<RegisterInput>`.
- *   - When you pass `loginSchema`    -> `T` becomes `LoginInput`, return type is `Promise<LoginInput>`.
- *   - When you pass `addressSchema`  -> `T` becomes `AddressInput`, return type is `Promise<AddressInput>`.
- *   - Benefit: One single reusable function validates ANY schema and provides 100%
- *     type safety & IDE autocomplete without needing `any` or duplicate functions.
+ * Zod & DTO (Data Transfer Object) quick guide
+ * 1. TypeScript types vanish at runtime; Zod schemas do NOT — validation
+ *    happens against real request payloads, not just at compile time.
+ * 2. DTO = the contract for data crossing the API boundary (login, register,
+ *    address). Keeping it in one schema avoids type/schema duplication.
+ * 3. z.infer<typeof schema> extracts the static TS type from the schema, so
+ *    there is exactly ONE source of truth for a shape.
+ * 4. validateDto<T> is generic: pass any schema -> get that schema's inferred
+ *    type back with IDE autocomplete (no `any`, no per-schema helpers).
  */
-
-// ============================================================================
-// 📝 Zod Schemas (Validation Rules)
-// ============================================================================
 
 const registerSchema = z.object({
   email: z.email("Invalid email address"),
@@ -73,27 +40,17 @@ const addressSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 
-// ============================================================================
-// 🏷️ Inferred TypeScript Types (DTO Interfaces)
-// ============================================================================
+// @typedef Inferred DTO types — used across service/controller with full typing
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AddressInput = z.infer<typeof addressSchema>;
 
-// ============================================================================
-// 🛠️ Generic DTO Validation Helper Function
-// ============================================================================
 /**
- * Generic Validation Helper
- * -------------------------
- * @param schema - The Zod schema to validate against (type: z.ZodSchema<T>)
- * @param data   - The raw untrusted input to validate (e.g. req.body)
- * @returns      - A Promise resolving to the validated, typed data of type <T>
- *
- * 💡 Usage in Controllers:
- * ------------------------
- * const validated = await validateDto(registerSchema, req.body); // 'validated' is typed as RegisterInput
- * const loginData = await validateDto(loginSchema, req.body);    // 'loginData' is typed as LoginInput
+ * Validate untrusted data against any Zod schema.
+ * @param schema - The Zod schema to validate against
+ * @param data - Raw input, e.g. req.body
+ * @returns The validated, typed data (type <T>)
+ * @throws {Error} A single descriptive message on the first Zod error
  */
 async function validateDto<T>(schema: z.ZodSchema<T>, data: unknown): Promise<T> {
   try {
