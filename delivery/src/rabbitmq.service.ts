@@ -81,8 +81,8 @@ class RabbitMQService {
       await this.channel.assertQueue(this.orderQueue, { durable: true });
       await this.channel.assertQueue(this.deliveryQueue, { durable: true });
 
-      // Bind queues to exchange — delivery_queue listens for order.created
-      // and order.ready events published by the ORDER service.
+      /* Bind queues to exchange — delivery_queue listens for order.created
+       and order.ready events published by the ORDER service. */
       await this.channel.bindQueue(this.deliveryQueue, this.exchangeName, "order.created");
       await this.channel.bindQueue(this.deliveryQueue, this.exchangeName, "order.ready");
 
@@ -111,11 +111,7 @@ class RabbitMQService {
       const deliveryMessage = JSON.parse(message!.content.toString()) as IOrder & { id?: string };
       const orderId = deliveryMessage._id?.toString() ?? deliveryMessage.id;
 
-      console.log("\n--------------------------------------------\n");
-      console.log("Delivery message received:", deliveryMessage);
-      console.log("\n--------------------------------------------\n");
-
-      // ══════════════════════════════════════════════════════════════════
+      // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
       // if delivery status is pending create a new delivery tracking
       if (deliveryMessage.status === "pending") {
         // (A) Create DeliveryTracking { orderId, status: "pending" }
@@ -138,6 +134,13 @@ class RabbitMQService {
           await Courier.findByIdAndUpdate(courier.id, { status: "busy", isAvailable: false });
         }
       }
+
+      // if delivery status is ready update the delivery tracking
+      if (deliveryMessage.status === "ready") {
+        // Update DeliveryTracking { orderId, status: "ready" }
+        await DeliveryTracking.findOneAndUpdate({ orderId: deliveryMessage._id }, { status: "ready" });
+      }
+      // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
     });
   }
 }

@@ -141,13 +141,13 @@ class AuthService {
   // -------------------------------------------------------
   // AVAILABLE ORDERS FOR COURIERS
   // -------------------------------------------------------
-  async getAvailableOrders(courierId: string) {
+  async getAvailableOrders() {
     // Find deliveries that are awaiting a courier:
     //   - status is pending or ready (not yet claimed)
-    //   - courierId does not exist yet (still unclaimed)
+    //   - courierId is null (no courier has accepted yet)
     const deliveries = await DeliveryTracking.find({
       status: { $in: ["pending", "ready"] },
-      courierId: { $exists: false },
+      courierId: null,
     });
 
     return {
@@ -165,7 +165,7 @@ class AuthService {
     // wins. If another courier just claimed it, this update matches nothing
     // and returns null.
     const delivery = await DeliveryTracking.findOneAndUpdate(
-      { orderId, courierId: { $exists: false } }, // ensures the order is not already accepted (by another courier)
+      { orderId, courierId: null }, // ensures the order is not already accepted (by another courier)
       { courierId, status: "assigned" },
       { new: true },
     );
@@ -192,7 +192,13 @@ class AuthService {
         actualDeliveryTime: data.actualArrival,
         notes: data.notes,
       },
+      { new: true },
     );
+
+    if (!delivery) {
+      throw new Error("Delivery not found or you are not assigned to this order");
+    }
+
     return {
       status: "success",
       data: delivery,

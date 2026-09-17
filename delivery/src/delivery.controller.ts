@@ -32,6 +32,12 @@ class DeliveryController {
 
     const result = await deliveryService.register(registerData);
 
+    res.cookie("accessToken", result.data.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    });
+
     res.status(201).json(result);
   });
 
@@ -40,6 +46,12 @@ class DeliveryController {
     const loginData = await validateDto(courierLoginSchema, req.body);
 
     const result = await deliveryService.login(loginData);
+
+    res.cookie("accessToken", result.data.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    });
 
     res.status(200).json(result);
   });
@@ -67,9 +79,7 @@ class DeliveryController {
 
   // GET /orders (protected: courier role only) -> which orders are up for grabs
   getAvailableOrders = catchAsync(async (req, res) => {
-    const { courierId } = req.params as { courierId: string };
-
-    const result = await deliveryService.getAvailableOrders(courierId);
+    const result = await deliveryService.getAvailableOrders();
 
     res.status(200).json(result);
   });
