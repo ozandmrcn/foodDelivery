@@ -187,10 +187,14 @@ class AuthService {
       { orderId, courierId },
       {
         status: data.status,
-        location: data.location,
-        estimatedDeliveryTime: data.estimatedArrival,
-        actualDeliveryTime: data.actualArrival,
-        notes: data.notes,
+        ...(data.location && { location: data.location }),
+        // @note estimatedArrival arrives in MINUTES (e.g. 15) but the field is a
+        //   Date — convert to an absolute future timestamp, never a raw number.
+        ...(data.estimatedArrival !== undefined && {
+          estimatedDeliveryTime: new Date(Date.now() + data.estimatedArrival * 60 * 1000),
+        }),
+        ...(data.actualArrival && { actualDeliveryTime: data.actualArrival }),
+        ...(data.notes && { notes: data.notes }),
       },
       { new: true },
     );

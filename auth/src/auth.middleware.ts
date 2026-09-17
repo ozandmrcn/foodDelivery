@@ -13,9 +13,9 @@ const { JsonWebTokenError, TokenExpiredError } = jwt;
 // @middleware authenticate — protects any route it is attached to
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // 1. Extract the token: prefer the httpOnly cookie, fall back to
-    //    `Authorization: Bearer <token>`. substring(7) strips "Bearer ".
-    const accessToken = req.cookies.accessToken || req.headers.authorization?.substring(7);
+    // 1. Extract the token: prefer an explicit `Authorization: Bearer <token>`
+    //    header over the ambient httpOnly cookie. substring(7) strips "Bearer ".
+    const accessToken = req.headers.authorization?.substring(7) || req.cookies.accessToken;
     if (!accessToken) {
       res.status(401).json({
         status: "error",

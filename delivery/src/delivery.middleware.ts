@@ -14,8 +14,9 @@ const { JsonWebTokenError, TokenExpiredError } = jwt;
 // @middleware authenticate — fills req.user with the decoded JWT payload
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Token from the httpOnly cookie or `Bearer xxxx` header (substring(7) strips "Bearer ").
-    const accessToken = req.cookies.accessToken || req.headers.authorization?.substring(7);
+    // Token from the `Bearer xxxx` header first — an explicit token always wins
+    // over the ambient httpOnly cookie (substring(7) strips "Bearer ").
+    const accessToken = req.headers.authorization?.substring(7) || req.cookies.accessToken;
     if (!accessToken) {
       res.status(401).json({
         status: "error",

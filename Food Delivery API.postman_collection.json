@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "8c78100d-3fa9-410e-b0bf-8cadc1824628",
     "name": "Food Delivery API",
-    "description": "# Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## Microservices Architecture & Endpoints Overview\n\n| Service | Base Route | Key Features |\n|---|---|---|\n| **Auth Service** | `/api/auth` | Register, Login, Profile, Refresh Token, Add Address, Logout |\n| **Restaurant Service** | `/api/restaurants` | Create Restaurant, Add Menu Item, List Restaurants, Restaurant Details, Restaurant Menu |\n| **Order Service** | `/api/order` | Place Order, Order Details, User Order History, Update Order Status |\n| **Delivery Service** | `/api/delivery` | Courier Register/Login, Update Courier Status, Courier Performance, Available Orders, Accept Delivery, Update Delivery Status, Track Delivery |\n\n---\n\n## Dynamic Environment Variables\n- `baseUrl`: `http://localhost:3000` (Gateway URL)\n- `token`: Bearer access token for users/admins\n- `refreshToken`: User refresh token\n- `userId`: Authenticated user ID\n- `courierToken`: Bearer access token for couriers\n- `courierId`: Authenticated courier ID\n- `restaurantId`: Created/selected restaurant ID\n- `menuItemId`: Created/selected menu item ID\n- `orderId`: Placed/selected order ID",
+    "description": "# Food Delivery Microservices API\n\nOfficial API Collection for the **Food Delivery Platform**.\n\n---\n\n## Microservices Architecture & Endpoints Overview\n\n| Service | Base Route | Key Features |\n|---|---|---|\n| **Auth Service** | `/api/auth` | Register, Login, Profile, Refresh Token, Add Address, Logout |\n| **Restaurant Service** | `/api/restaurants` | Create Restaurant, Add Menu Item, List Restaurants, Restaurant Details, Restaurant Menu |\n| **Order Service** | `/api/order` | Place Order, Order Details, User Order History, Update Order Status |\n| **Delivery Service** | `/api/delivery` | Courier Register/Login, Update Courier Status, Courier Performance, Available Orders, Accept Delivery, Update Delivery Status, Track Delivery |\n\n---\n\n## Dynamic Environment Variables\n- `baseUrl`: `http://localhost:3000` (Gateway URL)\n- `token`: Bearer access token for users/admins\n- `adminToken`: Bearer access token for the admin (auto-created by the Courier Performance request)\n- `refreshToken`: User refresh token\n- `userId`: Authenticated user ID\n- `courierToken`: Bearer access token for couriers\n- `courierId`: Authenticated courier ID\n- `restaurantId`: Created/selected restaurant ID\n- `menuItemId`: Created/selected menu item ID\n- `orderId`: Placed/selected order ID",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "57587615"
   },
@@ -42,7 +42,10 @@
                   "        pm.expect(res.result.data.user).to.have.property('id');",
                   "    });",
                   "",
-                  "    if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "    if (res.result.data.accessToken) {",
+                  "        pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "        if (res.result.data.user && res.result.data.user.role === 'admin') pm.collectionVariables.set('adminToken', res.result.data.accessToken);",
+                  "    }",
                   "    if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
                   "    if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
                   "} else {",
@@ -107,7 +110,10 @@
                   "        pm.expect(res.result.data.refreshToken).to.be.a('string');",
                   "    });",
                   "",
-                  "    if (res.result.data.accessToken) pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "    if (res.result.data.accessToken) {",
+                  "        pm.collectionVariables.set('token', res.result.data.accessToken);",
+                  "        if (res.result.data.user && res.result.data.user.role === 'admin') pm.collectionVariables.set('adminToken', res.result.data.accessToken);",
+                  "    }",
                   "    if (res.result.data.refreshToken) pm.collectionVariables.set('refreshToken', res.result.data.refreshToken);",
                   "    if (res.result.data.user && res.result.data.user.id) pm.collectionVariables.set('userId', res.result.data.user.id);",
                   "} else {",
@@ -156,6 +162,16 @@
         {
           "name": "Get Profile",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Drop the stored accessToken cookie so it never overrides the user Bearer header.",
+                  "pm.cookies.jar().unset(pm.request.url.toString(), 'accessToken', function () {});"
+                ],
+                "type": "text/javascript"
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -1199,6 +1215,43 @@
           "name": "Get Courier Performance (Admin)",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Drop the stored accessToken cookie so it never overrides this admin Bearer header.",
+                  "pm.cookies.jar().unset(pm.request.url.toString(), 'accessToken', function () {});",
+                  "// Admin-only endpoint: ensure a valid admin token exists.", "if (!pm.collectionVariables.get('adminToken')) {",
+                  "    var adminEmail = 'admin_' + Date.now() + '@delivery.com';",
+                  "    var adminReq = {",
+                  "        url: '{{baseUrl}}/api/auth/register',",
+                  "        method: 'POST',",
+                  "        header: { 'Content-Type': 'application/json' },",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify({",
+                  "                email: adminEmail,",
+                  "                password: 'password123',",
+                  "                firstName: 'Admin',",
+                  "                lastName: 'User',",
+                  "                phone: '+12125550199',",
+                  "                role: 'admin'",
+                  "            })",
+                  "        }",
+                  "    };",
+                  "    pm.sendRequest(adminReq, function (err, response) {",
+                  "        if (!err && response.code === 201) {",
+                  "            var res = response.json();",
+                  "            if (res.result.data.accessToken) {",
+                  "                pm.collectionVariables.set('adminToken', res.result.data.accessToken);",
+                  "            }",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "exec": [
@@ -1224,7 +1277,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token}}",
+                  "value": "{{adminToken}}",
                   "type": "string"
                 }
               ]
@@ -1275,7 +1328,15 @@
                   "    var res = pm.response.json();",
                   "    pm.expect(res.data).to.be.an('object');",
                   "    pm.expect(res.data.deliveries).to.be.an('array');",
-                  "});"
+                  "});",
+                  "",
+                  "// Prefer the first UNCLAIMED delivery so the accept step never",
+                  "// targets an order that a previous run already assigned.",
+                  "var _listResp = pm.response.json();",
+                  "var _unclaimed = (_listResp.data && _listResp.data.deliveries || []).filter(function (d) { return d.courierId === null; });",
+                  "if (_unclaimed.length) {",
+                  "    pm.collectionVariables.set('orderId', String(_unclaimed[0].orderId));",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
@@ -1509,6 +1570,10 @@
     },
     {
       "key": "token",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
       "value": ""
     },
     {
